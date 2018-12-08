@@ -54,7 +54,7 @@ Special Thanks
 * The folks in the [ReSwitched](https://reswitched.team/) Discord server for answering my innumerable questions while researching this (and having such a useful chat backlog!)
 * The memory reading code from jakibaki's [sys-netcheat](https://github.com/jakibaki/sys-netcheat) was super useful for getting keys out of running process memory
 * The System Save dumping methodology from Adubbz' [Compelled Disclosure](https://github.com/Adubbz/Compelled-Disclosure)
-* Shouts out to fellow key derivers: shadowninja108 for [HACGUI](https://github.com/shadowninja108/HACGUI), Thealexblarney for [Libhac](https://github.com/Thealexbarney/LibHac), and [rajkosto](https://github.com/rajkosto/) :eyes:
+* Shouts out to fellow key derivers: shadowninja108 for [HACGUI](https://github.com/shadowninja108/HACGUI), Thealexbarney for [Libhac](https://github.com/Thealexbarney/LibHac), and [rajkosto](https://github.com/rajkosto/) :eyes:
 * The constantly-improving docs on [Switchbrew wiki](https://switchbrew.org/wiki/) and [libnx](https://switchbrew.github.io/libnx/files.html)
 * [misson2000](https://github.com/misson20000) for help with `std::invoke` to get the function timer working
 * Literally the friends I made along the way! I came to the scene late and I've still managed to meet some wonderful people :) Thanks for all the help testing, making suggestions, and cheerleading!
