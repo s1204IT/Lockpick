@@ -82,7 +82,7 @@ KeyCollection::KeyCollection() {
         0x37, 0x4B, 0x77, 0x29, 0x59, 0xB4, 0x04, 0x30, 0x81, 0xF6, 0xE5, 0x8C, 0x6D, 0x36, 0x17, 0x9A}});
 
     //======================================Keys======================================//
-    // from Package1 -> TrustZone (Secure Monitor)
+    // from Package1 -> Secure_Monitor
     aes_kek_generation_source = {"aes_kek_generation_source", 0x10, {
         0x4D, 0x87, 0x09, 0x86, 0xC4, 0x5D, 0x20, 0x72, 0x2F, 0xBA, 0x10, 0x53, 0xDA, 0x92, 0xE8, 0xA9}};
     aes_kek_seed_01 = {"aes_kek_seed_01", 0x10, {
@@ -96,7 +96,7 @@ KeyCollection::KeyCollection() {
     retail_specific_aes_key_source = {"retail_specific_aes_key_source", 0x10, {
         0xE2, 0xD6, 0xB8, 0x7A, 0x11, 0x9C, 0xB8, 0x80, 0xE8, 0x22, 0x88, 0x8A, 0x46, 0xFB, 0xA1, 0x95}};
 
-    // from Package1ldr
+    // from Package1ldr (or Secure_Monitor on 6.2.0)
     keyblob_mac_key_source = {"keyblob_mac_key_source", 0x10, {
         0x59, 0xC7, 0xFB, 0x6F, 0xBE, 0x9B, 0xBE, 0x87, 0x65, 0x6B, 0x15, 0xC0, 0x53, 0x73, 0x36, 0xA5}};
     master_key_source = {"master_key_source", 0x10, {
@@ -256,14 +256,14 @@ int KeyCollection::get_keys() {
     Common::draw_line(0x8, 0x110, 0x280, GREEN);
     Common::draw_text_with_time(0x10, 0x130, GREEN, "Total time elapsed:", total_time.get_elapsed());
 
-    char keys_str[32];
+    char keys_str[32]; // todo: get sd seed
     sprintf(keys_str, "Total keys found: %lu", Key::get_saved_key_count());
     Common::draw_text(0x2a0, 0x130, CYAN, keys_str);
 
     Common::draw_text(0x30, 0x160, YELLOW, "WARNING: dumping titlekeys may crash homebrew or games UNLESS you reboot afterwards");
     Common::draw_text(0x160, 0x180, CYAN, ">> Press A to dump titlekeys or + to exit <<");
 
-    for(;;) {
+    while(appletMainLoop()) {
         hidScanInput();
         u64 kDown = hidKeysDown(CONTROLLER_P1_AUTO);
         if (kDown & KEY_PLUS)
@@ -284,7 +284,7 @@ int KeyCollection::get_keys() {
         return Status_success_titlekeys;
     } else {
         Common::draw_text(0x010, 0x1b0, RED, "Dumping titlekeys...");
-        Common::draw_text(0x190, 0x1b0, RED, "Failed. Reboot and try again!");
+        Common::draw_text(0x190, 0x1b0, RED, "Failed. Reboot and try again!"); // todo: detect if no titles installed
         return Status_success_titlekeys_failed;
     }
 }
@@ -534,6 +534,7 @@ void KeyCollection::get_titlekeys() {
     FsFileSystem save_fs;
     Result rc;
 
+    // todo: try reading as block device to not have to crash ES!
     for(size_t attempts = 0; attempts < 100; attempts++) {
         pmshellTerminateProcessByTitleId(ES_TID);
 
