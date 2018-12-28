@@ -16,13 +16,12 @@
 
 #pragma once
 
-#include <fstream>
 #include <string>
 #include <vector>
 
-#include <switch.h>
+#include <switch/types.h>
 
-#include "Common.hpp"
+#include <stdio.h>
 
 typedef std::vector<u8> byte_vector;
 
@@ -44,7 +43,7 @@ public:
     void set_found() { is_found = true; }
 
     // write key to file
-    void save_key(std::ofstream &file);
+    void save_key(FILE *file);
 
     static const size_t get_saved_key_count() { return saved_key_count; }
 

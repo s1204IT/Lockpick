@@ -18,9 +18,7 @@
 
 #include <vector>
 
-#include <switch.h>
-
-#include "Common.hpp"
+#include <switch/types.h>
 
 #define FS_TID      0x0100000000000000
 #define SSL_TID     0x0100000000000024
@@ -40,6 +38,8 @@
 #define KNOWN_MASTER_KEYS 7
 
 #define KEYBLOB_OFFSET 0x180000
+
+typedef std::vector<u8> byte_vector;
 
 class KeyLocation {
 public:

@@ -1,11 +1,11 @@
 Lockpick
 =
-This is a ground-up C++17 rewrite of homebrew key derivation software, namely [kezplez-nx](https://github.com/tesnos/kezplez-nx). It also dumps titlekeys. This will dump all keys through `*_key_05` on firmwares below `6.2.0` and through `*_key_06` on `6.2.0` and above.
+Lockpick is a ground-up C++17 rewrite of homebrew key derivation software, namely [kezplez-nx](https://github.com/tesnos/kezplez-nx). It also dumps titlekeys. This will dump all keys through `*_key_05` on firmwares below `6.2.0` and through `*_key_06` on `6.2.0`.
 
 What this software does differently
 =
-* Dumps `titlekeys`
-* Dumps `6.2.0` keys
+* Dumps `titlekeys` and SD seed
+* Dumps all keys through `6.2.0`
 * Uses the superfast `xxHash` instead of `sha256` when searching exefs for keys for a ~5x speed improvement
 * Gets all possible keys from running process memory - this means no need to decrypt `Package2` at all, let alone decompress `KIP`s
 * Gets `header_key` without `tsec`, `sbk`, `master_key_00` or `aes` sources - which may or may not be the same way `ChoiDujourNX` does it :eyes: (and I'm gonna issue a challenge to homebrew title installers to implement similar code so you don't need your users to use separate software like this :stuck_out_tongue_winking_eye: it's up to you to figure out if the same can be done for `key_area_keys` if needed)
@@ -15,16 +15,16 @@ Usage
 1. Use [Hekate v4.5+](https://github.com/CTCaer/hekate/releases) to dump TSEC and fuses:
     1. Push hekate payload bin using [TegraRCMSmash](https://github.com/rajkosto/TegraRcmSmash)/[TegraRCMGUI](https://github.com/eliboa/TegraRcmGUI)/modchip/injector
     2. Using the `VOL` and `Power` buttons to navigate, select `Console info...`
-    3. Select `Print fuse info`
+    3. Select `Print fuse info` (_not_ `kfuse info`)
     4. Press `Power` to save fuse info to SD card
     5. Select `Print TSEC keys`
     6. Press `Power` to save TSEC keys to SD card
 2. Launch CFW of choice
 3. Open `Homebrew Menu`
 4. Run `Lockpick`
-5. Use the resulting `prod.keys` file as needed and rename if required
+5. Use the resulting `/switch/prod.keys` file as needed and rename if required by any software you're using
 
-You may instead use [biskeydump](https://github.com/rajkosto/biskeydump) and dump to SD to get all keys prior to the 6.2.0 generation - all keys up to those ending in 05. This will dump all keys up to that point regardless which firmware it's run on.
+You may instead use [biskeydump](https://github.com/rajkosto/biskeydump) and dump to SD to get all keys prior to the 6.2.0 generation - all keys up to those ending in 05. Lockpick will dump all keys up to that point regardless which firmware it's run on.
 
 Notes
 =
@@ -62,7 +62,9 @@ Special Thanks
 
 Licenses
 =
-* `AES` functions are from [mbedtls](https://tls.mbed.org/) licensed under [GPLv2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html))
-* `creport_debug_types` and fast `sha256` implementation are from [Atmosphère](https://github.com/atmosphere-NX/Atmosphere) licensed under [GPLv2](https://github.com/Atmosphere-NX/Atmosphere/blob/master/LICENSE)
+* `AES` functions are from [mbedtls 2.13.0](https://tls.mbed.org/) licensed under [GPLv2](source/mbedtls/gpl-2.0.txt)
+* Aarch64 assembly `sha256` is from [Atmosphère](https://github.com/atmosphere-NX/Atmosphere) licensed under [GPLv2](https://github.com/Atmosphere-NX/Atmosphere/blob/master/LICENSE)
+* `es` ipc code is from [Tinfoil](https://github.com/Adubbz/Tinfoil) licensed under [MIT](https://github.com/Adubbz/Tinfoil/blob/master/LICENSE)
+* `FatFs R0.13c` is located [here](http://elm-chan.org/fsw/ff/00index_e.html) and is licensed under its own [BSD-style license](source/fatfs/LICENSE.txt)
 * Simple `xxHash` implementation is from [stbrumme](https://github.com/stbrumme/xxhash) licensed under [MIT](https://github.com/stbrumme/xxhash/blob/master/LICENSE)
 * Padlock icon is from [Icons8](https://icons8.com/) licensed under [Creative Commons Attribution-NoDerivs 3.0 Unported](https://creativecommons.org/licenses/by-nd/3.0/)

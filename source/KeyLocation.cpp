@@ -16,14 +16,11 @@
 
 #include "KeyLocation.hpp"
 
-#include <filesystem>
-#include <fstream>
-
-#include "creport_debug_types.hpp"
+#include <switch.h>
 
 void KeyLocation::get_from_memory(u64 tid, u8 segMask) {
     Handle debug_handle = INVALID_HANDLE;
-    DebugEventInfo d;
+    u64 d[8];
 
     // if not a kernel process, get pid from pm:dmnt
     if ((tid > 0x0100000000000005) && (tid != 0x0100000000000028)) {
@@ -44,7 +41,7 @@ void KeyLocation::get_from_memory(u64 tid, u8 segMask) {
         for (i = 0; i < num_processes - 1; i++) {
             if (R_SUCCEEDED(svcDebugActiveProcess(&debug_handle, pids[i])) &&
                 R_SUCCEEDED(svcGetDebugEvent(reinterpret_cast<u8 *>(&d), debug_handle)) &&
-                (d.info.attach_process.title_id == tid))
+                (d[2] == tid))
             {
                 break;
             }

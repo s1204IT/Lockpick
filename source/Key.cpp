@@ -17,12 +17,12 @@
 #include "Key.hpp"
 
 #include <algorithm>
-#include <iomanip>
 #include <vector>
 
 #include <mbedtls/aes.h>
 #include <mbedtls/cmac.h>
 
+#include "Common.hpp"
 #include "xxhash64.h"
 
 size_t Key::saved_key_count = 0;
@@ -68,19 +68,15 @@ Key::Key() :
 {
 }
 
-void Key::save_key(std::ofstream &file) {
+void Key::save_key(FILE *file) {
     if (!found())
         return;
 
     // format: <keyname> = <hex key> for hactool and similar tools
-    char key_chars[3] = "00";
-    file.write(name.c_str(), name.size());
-    file.write(" = ", 3);
-    for (u8 c : key) {
-        sprintf(key_chars, "%02x", c);
-        file.write(key_chars, 2);
-    }
-    file.write("\n", 1);
+    fprintf(file, "%s = ", name.c_str());
+    for (auto n : key)
+        fprintf(file, "%02x", n);
+    fprintf(file, "\n");
 
     saved_key_count++;
 }

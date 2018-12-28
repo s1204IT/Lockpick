@@ -19,12 +19,14 @@
 #include "Key.hpp"
 #include "KeyLocation.hpp"
 
+#include <switch/types.h>
+
 class KeyCollection {
 public:
     KeyCollection();
 
     // get KeyLocations and find keys in them
-    int get_keys();
+    void get_keys();
 
 private:
     // utility functions called by get_keys
@@ -87,7 +89,9 @@ private:
         rsa_oaep_kek_generation_source,
         rsa_private_kek_generation_source,
         save_mac_key,
-        ssl_rsa_kek;
+        ssl_rsa_kek,
+        // other
+        sd_seed;
 
     // key families
     std::vector<Key>

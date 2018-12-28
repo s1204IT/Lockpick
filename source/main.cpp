@@ -23,7 +23,6 @@ extern "C" void userAppInit()
 {
     plInitialize();
     pmdmntInitialize();
-    pmshellInitialize();
     splCryptoInitialize();
     splInitialize();
 }
@@ -32,7 +31,6 @@ extern "C" void userAppExit()
 {
     plExit();
     pmdmntExit();
-    pmshellExit();
     splCryptoExit();
     splExit();
 }
@@ -41,7 +39,8 @@ int main(int argc, char **argv) {
     Common::intro();
 
     KeyCollection Keys;
-    Common::wait_to_exit(Keys.get_keys());
+    Keys.get_keys();
+    Common::wait_to_exit();
 
     return 0;
 }

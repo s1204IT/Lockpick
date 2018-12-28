@@ -16,8 +16,6 @@
 
 #include "Stopwatch.hpp"
 
-#include "Common.hpp"
-
 void Stopwatch::start() {
     clock_gettime(CLOCK_REALTIME, &start_time);
 }

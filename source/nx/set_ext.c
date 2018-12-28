@@ -1,9 +1,8 @@
 #include "set_ext.h"
 
-#include <string.h>
-
-#include <switch.h>
 #include <switch/arm/atomics.h>
+#include <switch/services/sm.h>
+#include <switch/types.h>
 
 static Service g_setcalSrv;
 static u64 g_refCntCal;
@@ -23,7 +22,7 @@ void setcalExit(void) {
     }
 }
 
-Result setcalGetEticketDeviceKey(u8 *key) {
+Result setcalGetEticketDeviceKey(void *key) {
     IpcCommand c;
     ipcInitialize(&c);
     ipcAddRecvBuffer(&c, key, 0x244, 0);

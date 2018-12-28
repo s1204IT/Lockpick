@@ -20,14 +20,17 @@
 */
 
 #include "Common.hpp"
+#include "Key.hpp"
 
-#include <algorithm>
+#include <machine/endian.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <filesystem>
-#include <fstream>
+#include <string>
 
-extern "C" {
-    #include <machine/endian.h>
-}
+#include <switch.h>
 
 #include "sha256.h"
 
@@ -116,18 +119,18 @@ namespace Common {
         FT_New_Memory_Face(library, static_cast<FT_Byte *>(font.address), font.size, 0, &face);
         FT_Set_Char_Size(face, 0, 6*64, 300, 300);
 
-        gfxSetMode(GfxMode_LinearDouble);
+        gfxSetMode(GfxMode_LinearDouble); // todo: update for nwindow/framebuffer
         framebuf = (u32 *)gfxGetFramebuffer(&framebuf_width, NULL);
         memset(framebuf, 0, gfxGetFramebufferSize());
         
         draw_text(0x10, 0x020, YELLOW, "Lockpick! by shchmue");
 
-        draw_set_rect(814, 452 + 42 * 0, 450, 42, RGBA8_MAXALPHA(0xe7, 0x00, 0x00));
-        draw_set_rect(814, 452 + 42 * 1, 450, 42, RGBA8_MAXALPHA(0xff, 0x8c, 0x00));
-        draw_set_rect(814, 452 + 42 * 2, 450, 42, RGBA8_MAXALPHA(0xff, 0xef, 0x00));
-        draw_set_rect(814, 452 + 42 * 3, 450, 42, RGBA8_MAXALPHA(0x00, 0x81, 0x1f));
-        draw_set_rect(814, 452 + 42 * 4, 450, 42, RGBA8_MAXALPHA(0x00, 0x44, 0xff));
-        draw_set_rect(814, 452 + 42 * 5, 450, 42, RGBA8_MAXALPHA(0x76, 0x00, 0x89));
+        draw_set_rect(814, 452 + 42 * 0, 450, 42, FLAG_RED);
+        draw_set_rect(814, 452 + 42 * 1, 450, 42, FLAG_ORANGE);
+        draw_set_rect(814, 452 + 42 * 2, 450, 42, FLAG_YELLOW);
+        draw_set_rect(814, 452 + 42 * 3, 450, 42, FLAG_GREEN);
+        draw_set_rect(814, 452 + 42 * 4, 450, 42, FLAG_BLUE);
+        draw_set_rect(814, 452 + 42 * 5, 450, 42, FLAG_VIOLET);
 
         if (  !(envIsSyscallHinted(0x60) &&     // svcDebugActiveProcess
                 envIsSyscallHinted(0x63) &&     // svcGetDebugEvent
@@ -135,76 +138,70 @@ namespace Common {
                 envIsSyscallHinted(0x69) &&     // svcQueryDebugProcessMemory
                 envIsSyscallHinted(0x6a))) {    // svcReadDebugProcessMemory
             draw_text(0x190, 0x20, RED, "Error: Please run with debug svc permissions!");
-            wait_to_exit(Status_fail);
+            wait_to_exit();
         }
 
-        draw_text(0x10, 0x080, CYAN, "Get Tegra keys...");
-        draw_text(0x10, 0x0a0, CYAN, "Get keys from memory...");
-        draw_text(0x10, 0x0c0, CYAN, "Get master keys...");
-        draw_text(0x10, 0x0e0, CYAN, "Derive remaining keys...");
-        draw_text(0x10, 0x100, CYAN, "Saving keys to keyfile...");
-        draw_text(0x10, 0x130, CYAN, "Total time elapsed:");
+        draw_text(0x10, 0x060, CYAN, "Get Tegra keys...");
+        draw_text(0x10, 0x080, CYAN, "Get keys from memory...");
+        draw_text(0x10, 0x0a0, CYAN, "Get master keys...");
+        draw_text(0x10, 0x0c0, CYAN, "Derive remaining keys...");
+        draw_text(0x10, 0x0e0, CYAN, "Saving keys to keyfile...");
+        draw_text(0x10, 0x110, CYAN, "Total time elapsed:");
 
         consoleUpdate(NULL);
     }
 
     void get_tegra_keys(Key &sbk, Key &tsec, Key &tsec_root) {
-        // support hekate dump
-        if (!std::filesystem::exists("/backup"))
-            return;
-        for (auto &p : std::filesystem::recursive_directory_iterator("/backup")) {
-            if (sbk.found() && tsec.found())
-                return;
-            if (p.is_regular_file()) {
-                if (!sbk.found() && (p.file_size() == 0x2fc) &&
-                    (std::string("fuse").compare(std::string(p.path().filename()).substr(0, 4)) == 0))
-                {
-                    std::ifstream fuse_file(p.path(), std::ios::binary);
-                    byte_vector temp_key(0x10);
-                    fuse_file.seekg(0xa4);
-                    fuse_file.read(reinterpret_cast<char *>(temp_key.data()), 0x10);
-                    sbk = Key("secure_boot_key", 0x10, temp_key);
+        // support Hekate dump
+        if (std::filesystem::exists("/backup")) {
+            for (auto &p : std::filesystem::recursive_directory_iterator("/backup")) {
+                if (p.is_regular_file()) {
+                    if (!sbk.found() && (p.file_size() == 0x2fc) &&
+                        (std::string("fuse").compare(std::string(p.path().filename()).substr(0, 4)) == 0))
+                    {
+                        FILE *fuse_file = fopen(p.path().c_str(), "rb");
+                        if (!fuse_file) continue;
+                        byte_vector temp_key(0x10);
+                        fseek(fuse_file, 0xa4, SEEK_SET);
+                        fread(temp_key.data(), 0x10, 1, fuse_file);
+                        sbk = Key("secure_boot_key", 0x10, temp_key);
+                        fclose(fuse_file);
+                    }
+                    else if (!tsec.found() && (p.file_size() == 0x30) &&
+                        (std::string("tsec").compare(std::string(p.path().filename()).substr(0, 4)) == 0))
+                    {
+                        FILE *tsec_file = fopen(p.path().c_str(), "rb");
+                        if (!tsec_file) continue;
+                        byte_vector temp_key(0x10);
+                        fread(temp_key.data(), 0x10, 1, tsec_file);
+                        tsec = Key("tsec_key", 0x10, temp_key);
+                        fread(temp_key.data(), 0x10, 1, tsec_file);
+                        tsec_root.find_key(temp_key);
+                        fclose(tsec_file);
+                    }
                 }
-                else if (!tsec.found() && (p.file_size() == 0x30) &&
-                    (std::string("tsec").compare(std::string(p.path().filename()).substr(0, 4)) == 0))
-                {
-                    std::ifstream tsec_file(p.path(), std::ios::binary);
-                    byte_vector temp_key(0x10);
-                    tsec_file.read(reinterpret_cast<char *>(temp_key.data()), 0x10);
-                    tsec = Key("tsec_key", 0x10, temp_key);
-                    tsec_file.read(reinterpret_cast<char *>(temp_key.data()), 0x10);
-                    tsec_root.find_key(temp_key);
-                }
+                if (sbk.found() && tsec.found())
+                    return;
             }
         }
-
         // support biskeydump v7 dump
         if (std::filesystem::exists("/device.keys")) {
-            std::ifstream key_file("/device.keys");
-            for (std::string line; std::getline(key_file, line); !sbk.found() && !tsec.found()) {
-                line.erase(std::remove_if(
-                    line.begin(), line.end(),
-                    [l = std::locale{}](auto ch) { return std::isspace(ch, l); }
-                ), line.end());
-                if (line.substr(0, 15).compare("secure_boot_key") == 0)
+            FILE *key_file = fopen("/device.keys", "r");
+            char line[0x100];
+            while (fgets(line, sizeof(line), key_file) && !(sbk.found() && tsec.found())) {
+                if (strncmp("secure_boot_key", line, 15) == 0)
                     sbk = Key("secure_boot_key", 0x10, key_string_to_byte_vector(line));
-                else if (line.substr(0, 8).compare("tsec_key") == 0)
+                else if (strncmp("tsec_key", line, 8) == 0)
                     tsec = Key("tsec_key", 0x10, key_string_to_byte_vector(line));
             }
+            fclose(key_file);
         }
     }
 
-    void wait_to_exit(int status) {
-        if (status == Status_fail)
-            draw_text(0x1f4, 0x080, RED, ">> Press + to exit <<");
-        else if (status == Status_success_no_titlekeys)
-            draw_text(0x1f4, 0x1a0, GREEN, ">> Press + to exit <<");
-        else if (status == Status_success_titlekeys)
-            draw_text(0x1f4, 0x1f0, GREEN, ">> Press + to exit <<");
-        else if (status == Status_success_titlekeys_failed)
-            draw_text(0x1f4, 0x1f0, RED, ">> Press + to exit <<");
+    void wait_to_exit() {
+        draw_text(0x10b, 0x24b, YELLOW, ">> Press + to exit <<");
 
-        while(appletMainLoop() & (status != Status_success_no_titlekeys)) {
+        while(appletMainLoop()) {
             hidScanInput();
             u64 kDown = hidKeysDown(CONTROLLER_P1_AUTO);
             if (kDown & KEY_PLUS) break;
@@ -229,9 +226,9 @@ namespace Common {
     }
 
     byte_vector key_string_to_byte_vector(std::string key_string) {
-        key_string = key_string.substr(key_string.find('=') + 1);
-        byte_vector temp_key(key_string.size() / 2);
-        for (size_t i = 0; i < temp_key.size(); i += 8)
+        key_string = key_string.substr(key_string.find('=') + 2);
+        byte_vector temp_key((key_string.size() - 1) / 2);
+        for (size_t i = 0; i < temp_key.size() - 1; i += 8)
             *reinterpret_cast<u64 *>(temp_key.data() + i) = __bswap64(strtoul(key_string.substr(i * 2, 0x10).c_str(), NULL, 16));
         return temp_key;
     }

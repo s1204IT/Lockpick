@@ -17,29 +17,40 @@
 #include "KeyCollection.hpp"
 
 #include "Common.hpp"
-#include "creport_debug_types.hpp"
 #include "Stopwatch.hpp"
 
 #include <algorithm>
 #include <chrono>
-#include <filesystem>
-#include <fstream>
 #include <functional>
-#include <iomanip>
+#include <set>
+#include <string>
+#include <unordered_map>
+
+#include <stdio.h>
+
+#include <switch.h>
+
+#include "fatfs/ff.h"
 
 extern "C" {
-    #include "set_ext.h"
+    #include "nx/es.h"
+    #include "nx/set_ext.h"
 }
 
-const u8 KeyCollection::null_hash[0x20] = { // hash of empty string
+#define TITLEKEY_BUFFER_SIZE 0x40000
+
+// hash of empty string
+const u8 KeyCollection::null_hash[0x20] = {
         0xE3, 0xB0, 0xC4, 0x42, 0x98, 0xFC, 0x1C, 0x14, 0x9A, 0xFB, 0xF4, 0xC8, 0x99, 0x6F, 0xB9, 0x24,
         0x27, 0xAE, 0x41, 0xE4, 0x64, 0x9B, 0x93, 0x4C, 0xA4, 0x95, 0x99, 0x1B, 0x78, 0x52, 0xB8, 0x55};
+
+FsStorage storage;
 
 // function timer
 template<typename Duration = std::chrono::microseconds, typename FT, typename ... Args>
 typename Duration::rep profile(FT&& fun, Args&&... args) {
     const auto beg = std::chrono::high_resolution_clock::now();
-    std::invoke(fun, std::forward<Args>(args)...);//std::forward<FT>(fun)(std::forward<Args>(args)...);
+    std::invoke(fun, std::forward<Args>(args)...);
     const auto end = std::chrono::high_resolution_clock::now();
     return std::chrono::duration_cast<Duration>(end - beg).count();
 }
@@ -226,67 +237,51 @@ KeyCollection::KeyCollection() {
     };
 };
 
-int KeyCollection::get_keys() {
+void KeyCollection::get_keys() {
     Stopwatch total_time;
     total_time.start();
 
     int64_t profiler_time = profile(Common::get_tegra_keys, sbk, tsec, tsec_root_key);
     if ((sbk.found() && tsec.found()) || tsec_root_key.found()) {
-        Common::draw_text_with_time(0x10, 0x80, GREEN, "Get Tegra keys...", profiler_time);
+        Common::draw_text_with_time(0x10, 0x60, GREEN, "Get Tegra keys...", profiler_time);
     } else {
-        Common::draw_text(0x010, 0x80, RED, "Get Tegra keys...");
-        Common::draw_text(0x190, 0x80, RED, "Failed");
+        Common::draw_text(0x010, 0x60, RED, "Get Tegra keys...");
+        Common::draw_text(0x190, 0x60, RED, "Failed");
         Common::draw_text(0x190, 0x20, RED, "Warning: Saving limited keyset.");
         Common::draw_text(0x190, 0x40, RED, "Dump Tegra keys with payload and run again to get all keys.");
     }
 
     profiler_time = profile(&KeyCollection::get_memory_keys, *this);
-    Common::draw_text_with_time(0x10, 0x0a0, GREEN, "Get keys from memory...", profiler_time);
+    Common::draw_text_with_time(0x10, 0x080, GREEN, "Get keys from memory...", profiler_time);
 
     profiler_time = profile(&KeyCollection::get_master_keys, *this);
-    Common::draw_text_with_time(0x10, 0x0c0, GREEN, "Get master keys...", profiler_time);
+    Common::draw_text_with_time(0x10, 0x0a0, GREEN, "Get master keys...", profiler_time);
 
     profiler_time = profile(&KeyCollection::derive_keys, *this);
-    Common::draw_text_with_time(0x10, 0x0e0, GREEN, "Derive remaining keys...", profiler_time);
+    Common::draw_text_with_time(0x10, 0x0c0, GREEN, "Derive remaining keys...", profiler_time);
 
     profiler_time = profile(&KeyCollection::save_keys, *this);
-    Common::draw_text_with_time(0x10, 0x100, GREEN, "Saving keys to keyfile...", profiler_time);
+    Common::draw_text_with_time(0x10, 0x0e0, GREEN, "Saving keys to keyfile...", profiler_time);
 
     total_time.stop();
-    Common::draw_line(0x8, 0x110, 0x280, GREEN);
-    Common::draw_text_with_time(0x10, 0x130, GREEN, "Total time elapsed:", total_time.get_elapsed());
+    Common::draw_line(0x8, 0xf0, 0x280, GREEN);
+    Common::draw_text_with_time(0x10, 0x110, GREEN, "Total time elapsed:", total_time.get_elapsed());
 
-    char keys_str[32]; // todo: get sd seed
+    char keys_str[32];
     sprintf(keys_str, "Total keys found: %lu", Key::get_saved_key_count());
-    Common::draw_text(0x2a0, 0x130, CYAN, keys_str);
+    Common::draw_text(0x2a0, 0x110, CYAN, keys_str);
+    Common::draw_text(0x80, 0x140, GREEN, "Keys saved to \"/switch/prod.keys\"!");
 
-    Common::draw_text(0x30, 0x160, YELLOW, "WARNING: dumping titlekeys may crash homebrew or games UNLESS you reboot afterwards");
-    Common::draw_text(0x160, 0x180, CYAN, ">> Press A to dump titlekeys or + to exit <<");
-
-    while(appletMainLoop()) {
-        hidScanInput();
-        u64 kDown = hidKeysDown(CONTROLLER_P1_AUTO);
-        if (kDown & KEY_PLUS)
-            return Status_success_no_titlekeys;
-        else if (kDown & KEY_A)
-            break;
-
-        consoleUpdate(NULL);
-    }
-
-    Common::draw_text(0x10, 0x1b0, CYAN, "Dumping titlekeys...");
+    Common::draw_text(0x10, 0x170, CYAN, "Dumping titlekeys...");
     consoleUpdate(NULL);
     profiler_time = profile(&KeyCollection::get_titlekeys, *this);
-    if (titlekeys_dumped > 0) {
-        Common::draw_text_with_time(0x10, 0x1b0, GREEN, "Dumping titlekeys...", profiler_time);
-        sprintf(keys_str, "Titlekeys found: %lu", titlekeys_dumped);
-        Common::draw_text(0x2a0, 0x1b0, CYAN, keys_str);
-        return Status_success_titlekeys;
-    } else {
-        Common::draw_text(0x010, 0x1b0, RED, "Dumping titlekeys...");
-        Common::draw_text(0x190, 0x1b0, RED, "Failed. Reboot and try again!"); // todo: detect if no titles installed
-        return Status_success_titlekeys_failed;
-    }
+    Common::draw_text_with_time(0x10, 0x170, GREEN, "Dumping titlekeys...", profiler_time);
+    sprintf(keys_str, "Titlekeys found: %lu", titlekeys_dumped);
+    Common::draw_text(0x2a0, 0x170, CYAN, keys_str);
+    if (titlekeys_dumped > 0)
+        Common::draw_text(0x80, 0x1a0, GREEN, "Titlekeys saved to \"/switch/title.keys\"!");
+    else
+        Common::draw_text(0x80, 0x1a0, GREEN, "No titlekeys found. Either you've never played or installed a game or dump failed.");
 }
 
 void KeyCollection::get_master_keys() {
@@ -435,10 +430,42 @@ void KeyCollection::derive_keys() {
     if (ssl_rsa_kek_source_x.found() && ssl_rsa_kek_source_y.found() && !master_key.empty())
         ssl_rsa_kek = Key {"ssl_rsa_kek", 0x10,
             ssl_rsa_kek_source_x.generate_kek(master_key[0], rsa_private_kek_generation_source, ssl_rsa_kek_source_y)};
+
+    char seed_vector[0x10], seed[0x10], buffer[0x10];
+    u32 bytes_read, file_pos = 0;
+
+    // dump sd seed
+    FILE *sd_private = fopen("/Nintendo/Contents/private", "rb");
+    if (!sd_private) return;
+    fread(seed_vector, 0x10, 1, sd_private);
+    fclose(sd_private);
+
+    FATFS fs;
+    FRESULT fr;
+    FIL save_file;
+
+    fsOpenBisStorage(&storage, 31);
+    if (f_mount(&fs, "", 1) || f_chdir("/save")) return;
+    if (f_open(&save_file, "8000000000000043", FA_READ | FA_OPEN_EXISTING)) return;
+
+    for (;;) {
+        fr = f_read(&save_file, buffer, 0x10, &bytes_read);
+        if (fr || (bytes_read == 0)) break;
+        if (std::equal(seed_vector, seed_vector + 0x10, buffer)) {
+            f_read(&save_file, seed, 0x10, &bytes_read);
+            sd_seed = Key {"sd_seed", 0x10, byte_vector(seed, seed + 0x10)};
+            break;
+        }
+        file_pos += 0x4000;
+        if (f_lseek(&save_file, file_pos)) break;
+    }
+    f_close(&save_file);
+    fsStorageClose(&storage);
 }
 
 void KeyCollection::save_keys() {
-    std::ofstream key_file("/switch/prod.keys");
+    FILE *key_file = fopen("/switch/prod.keys", "w");
+    if (!key_file) return;
 
     aes_kek_generation_source.save_key(key_file);
     aes_key_generation_source.save_key(key_file);
@@ -496,6 +523,7 @@ void KeyCollection::save_keys() {
     sd_card_kek_source.save_key(key_file);
     sd_card_nca_key_source.save_key(key_file);
     sd_card_save_key_source.save_key(key_file);
+    sd_seed.save_key(key_file);
     ssl_rsa_kek.save_key(key_file);
     for (auto k : ssl_keys)
         k->save_key(key_file);
@@ -504,11 +532,45 @@ void KeyCollection::save_keys() {
     titlekek_source.save_key(key_file);
     tsec.save_key(key_file);
     tsec_root_key.save_key(key_file);
+
+    fclose(key_file);
 }
 
 void KeyCollection::get_titlekeys() {
     if (!kernelAbove200() || !eticket_rsa_kek.found())
         return;
+
+    u32 common_count, personalized_count, bytes_read, ids_written;
+
+    esInitialize();
+    esCountCommonTicket(&common_count);
+    esCountPersonalizedTicket(&personalized_count);
+    NcmRightsId common_rights_ids[common_count], personalized_rights_ids[personalized_count];
+    esListCommonTicket(&ids_written, common_rights_ids, sizeof(common_rights_ids));
+    esListPersonalizedTicket(&ids_written, personalized_rights_ids, sizeof(personalized_rights_ids));
+    esExit();
+    if ((common_count == 0) && (personalized_count == 0))
+        return;
+
+    /*
+        catalog all currently installed rights ids
+        since we are crawling the whole save file, we might accidentally find previously deleted tickets
+        this would be fine, except we have to match the exact list so we don't stop too early
+    */
+    char titlekey_block[0x100], buffer[TITLEKEY_BUFFER_SIZE], rights_id_string[0x21], titlekey_string[0x21];
+    std::set<std::string> rights_ids;
+    for (size_t i = 0; i < common_count; i++) {
+        for (size_t j = 0; j < 0x10; j++) {
+            sprintf(&rights_id_string[j*2], "%02x", common_rights_ids[i].c[j]);
+        }
+        rights_ids.insert(rights_id_string);
+    }
+    for (size_t i = 0; i < personalized_count; i++) {
+        for (size_t j = 0; j < 0x10; j++) {
+            sprintf(&rights_id_string[j*2], "%02x", personalized_rights_ids[i].c[j]);
+        }
+        rights_ids.insert(rights_id_string);
+    }
 
     // get extended eticket RSA key from PRODINFO
     u8 eticket_data[0x244] = {};
@@ -522,8 +584,8 @@ void KeyCollection::get_titlekeys() {
         byte_vector(eticket_data + 4, eticket_data + 0x14)
     );
 
-    // public exponent must be 65537 == 0x10001
-    if (!(dec_keypair[0x201] == 1) || !(dec_keypair[0x203] == 1))
+    // public exponent must be 65537 == 0x10001 (big endian)
+    if (!(dec_keypair[0x200] == 0) || !(dec_keypair[0x201] == 1) || !(dec_keypair[0x202] == 0) || !(dec_keypair[0x203] == 1))
         return;
 
     u8 *D = &dec_keypair[0], *N = &dec_keypair[0x100], *E = &dec_keypair[0x200];
@@ -531,92 +593,101 @@ void KeyCollection::get_titlekeys() {
     if (!test_key_pair(E, D, N))
         return;
 
-    FsFileSystem save_fs;
-    Result rc;
+    FATFS fs;
+    FRESULT fr;
+    FIL save_file;
+    // map of all found rights ids and corresponding titlekeys
+    std::unordered_map<std::string, std::string> titlekeys;
 
-    // todo: try reading as block device to not have to crash ES!
-    for(size_t attempts = 0; attempts < 100; attempts++) {
-        pmshellTerminateProcessByTitleId(ES_TID);
+    fsOpenBisStorage(&storage, 31);
+    if (f_mount(&fs, "", 1) || f_chdir("/save")) return;
+    if (f_open(&save_file, "80000000000000e1", FA_READ | FA_OPEN_EXISTING)) return;
+    while ((common_count != 0) && (titlekeys_dumped < common_count)) {
+        fr = f_read(&save_file, buffer, TITLEKEY_BUFFER_SIZE, &bytes_read);
+        if (fr || (bytes_read == 0)) break;
+        for (size_t i = 0; i < bytes_read; i += 0x4000) {
+            for (size_t j = i; j < i + 0x4000; j += 0x400) {
+                if (*reinterpret_cast<u32 *>(&buffer[j]) == 0x10004) {
+                    for (size_t k = 0; k < 0x10; k++)
+                        sprintf(&rights_id_string[k*2], "%02x", buffer[j + 0x2a0 + k]);
 
-        if (R_SUCCEEDED(rc = fsMount_SystemSaveData(&save_fs, ES_COMMON_SAVE_ID)))
-            break;
+                    // skip if rights id found but not reported by es
+                    if (rights_ids.find(rights_id_string) == rights_ids.end())
+                        continue;
+                    // skip if rights id already in map
+                    if (titlekeys.find(rights_id_string) != titlekeys.end())
+                        continue;
+
+                    for (size_t k = 0; k < 0x10; k++)
+                        sprintf(&titlekey_string[k*2], "%02x", buffer[j + 0x180 + k]);
+                    titlekeys[rights_id_string] = titlekey_string;
+                    titlekeys_dumped++;
+                } else {
+                    break;
+                }
+            }
+        }
     }
-    if (R_FAILED(rc))
-        return;
-
-    if (fsdevMountDevice("save", save_fs) == -1)
-        return;
-
-    char ca_issuer[4], titlekey_block[0x100], rights_id[0x10], write_string[0x20];
-
-    std::ofstream titlekey_file("/switch/title.keys");
-    std::ifstream common_ticket_bin("save:/ticket.bin", std::ios::binary);
-
-    for (size_t i = 0; ; i += 0x400) {
-        common_ticket_bin.seekg(i + 0x140);
-        common_ticket_bin.read(ca_issuer, 4);
-        if (!std::equal(ca_issuer, ca_issuer + 4, "Root"))
-            break;
-        common_ticket_bin.seekg(i + 0x180);
-        common_ticket_bin.read(titlekey_block, 0x10);
-        common_ticket_bin.seekg(i + 0x2a0);
-        common_ticket_bin.read(rights_id, 0x10);
-        for (size_t j = 0; j < 0x10; j++)
-            sprintf(&write_string[j*2], "%02x", rights_id[j]);
-        titlekey_file.write(write_string, 0x20);
-        titlekey_file.write(" = ", 3);
-        for (size_t j = 0; j < 0x10; j++)
-            sprintf(&write_string[j*2], "%02x", titlekey_block[j]);
-        titlekey_file.write(write_string, 0x20);
-        titlekey_file.write("\n", 1);
-        titlekeys_dumped++;
-    }
-    fsdevUnmountDevice("save");
-
-    if (R_FAILED(fsMount_SystemSaveData(&save_fs, ES_PERSONALIZED_SAVE_ID)) ||
-                (fsdevMountDevice("save", save_fs) == -1))
-        return;
-
-    std::ifstream personalized_ticket_bin("save:/ticket.bin", std::ios::binary);
+    f_close(&save_file);
 
     u8 M[0x100];
-    for (size_t i = 0; ; i += 0x400) {
-        personalized_ticket_bin.seekg(i + 0x140);
-        personalized_ticket_bin.read(ca_issuer, 4);
-        if (!std::equal(ca_issuer, ca_issuer + 4, "Root"))
-            break;
-        personalized_ticket_bin.seekg(i + 0x180);
-        personalized_ticket_bin.read(titlekey_block, 0x100);
 
-        splUserExpMod(titlekey_block, N, D, 0x100, M);
-        
-        // decrypts the titlekey from personalized ticket
-        u8 salt[0x20], db[0xdf];
-        mgf1(M + 0x21, 0xdf, salt, 0x20);
-        for (size_t j = 0; j < 0x20; j++)
-            salt[j] ^= M[j + 1];
+    if (f_open(&save_file, "80000000000000e2", FA_READ | FA_OPEN_EXISTING)) return;
+    while ((personalized_count != 0) && (titlekeys_dumped < common_count + personalized_count)) {
+        fr = f_read(&save_file, buffer, TITLEKEY_BUFFER_SIZE, &bytes_read);
+        if (fr || (bytes_read == 0)) break;
+        for (size_t i = 0; i < bytes_read; i += 0x4000) {
+            for (size_t j = i; j < i + 0x4000; j += 0x400) {
+                if (*reinterpret_cast<u32 *>(&buffer[j]) == 0x10004) {
+                    std::copy(buffer + j + 0x180, buffer + j + 0x280, titlekey_block);
+                    
+                    splUserExpMod(titlekey_block, N, D, 0x100, M);
 
-        mgf1(salt, 0x20, db, 0xdf);
-        for (size_t j = 0; j < 0xdf; j++)
-            db[j] ^= M[j + 0x21];
+                    // decrypts the titlekey from personalized ticket
+                    u8 salt[0x20], db[0xdf];
+                    mgf1(M + 0x21, 0xdf, salt, 0x20);
+                    for (size_t k = 0; k < 0x20; k++)
+                        salt[k] ^= M[k + 1];
 
-        // verify it starts with hash of null string
-        if (!std::equal(db, db + 0x20, null_hash))
-            continue;
+                    mgf1(salt, 0x20, db, 0xdf);
+                    for (size_t k = 0; k < 0xdf; k++)
+                        db[k] ^= M[k + 0x21];
 
-        personalized_ticket_bin.seekg(i + 0x2a0);
-        personalized_ticket_bin.read(rights_id, 0x10);
-        for (size_t j = 0; j < 0x10; j++)
-            sprintf(&write_string[j*2], "%02x", rights_id[j]);
-        titlekey_file.write(write_string, 0x20);
-        titlekey_file.write(" = ", 3);
-        for (size_t j = 0; j < 0x10; j++)
-            sprintf(&write_string[j*2], "%02x", db[j + 0xcf]);
-        titlekey_file.write(write_string, 0x20);
-        titlekey_file.write("\n", 1);
-        titlekeys_dumped++;
+                    // verify it starts with hash of null string
+                    if (!std::equal(db, db + 0x20, null_hash))
+                        continue;
+
+                    for (size_t k = 0; k < 0x10; k++)
+                        sprintf(&rights_id_string[k*2], "%02x", buffer[j + 0x2a0 + k]);
+
+                    // skip if rights id found but not reported by es
+                    if (rights_ids.find(rights_id_string) == rights_ids.end())
+                        continue;
+                    // skip if rights id already in map
+                    if (titlekeys.find(rights_id_string) != titlekeys.end())
+                        continue;
+
+                    for (size_t k = 0; k < 0x10; k++)
+                        sprintf(&titlekey_string[k*2], "%02x", db[k + 0xcf]);
+                    titlekeys[rights_id_string] = titlekey_string;
+                    titlekeys_dumped++;
+                } else {
+                    break;
+                }
+            }
+        }
     }
-    fsdevUnmountDevice("save");
+    f_close(&save_file);
+    fsStorageClose(&storage);
+
+    if (titlekeys.empty())
+        return;
+
+    FILE *titlekey_file = fopen("/switch/title.keys", "wb");
+    if (!titlekey_file) return;
+    for (auto k : titlekeys)
+        fprintf(titlekey_file, "%s = %s\n", k.first.c_str(), k.second.c_str());
+    fclose(titlekey_file);
 }
 
 void KeyCollection::mgf1(const u8 *data, size_t data_length, u8 *mask, size_t mask_length) {

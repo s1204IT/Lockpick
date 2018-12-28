@@ -16,25 +16,29 @@
 
 #pragma once
 
-#include "Key.hpp"
+#include <string>
+#include <vector>
 
 #include <ft2build.h>
-#include <switch.h>
 #include FT_FREETYPE_H
+
+#include <switch/types.h>
 
 #define GREEN   RGBA8_MAXALPHA(0, 0xff, 0)
 #define RED     RGBA8_MAXALPHA(0xff, 0, 0)
 #define CYAN    RGBA8_MAXALPHA(0, 0xff, 0xff)
 #define YELLOW  RGBA8_MAXALPHA(0xff, 0xff, 0)
 
-enum {
-    Status_fail = 0,
-    Status_success_no_titlekeys,
-    Status_success_titlekeys,
-    Status_success_titlekeys_failed
-};
+#define FLAG_RED    RGBA8_MAXALPHA(0xe7, 0x00, 0x00)
+#define FLAG_ORANGE RGBA8_MAXALPHA(0xff, 0x8c, 0x00)
+#define FLAG_YELLOW RGBA8_MAXALPHA(0xff, 0xef, 0x00)
+#define FLAG_GREEN  RGBA8_MAXALPHA(0x00, 0x81, 0x1f)
+#define FLAG_BLUE   RGBA8_MAXALPHA(0x00, 0x44, 0xff)
+#define FLAG_VIOLET RGBA8_MAXALPHA(0x76, 0x00, 0x89)
 
 class Key;
+
+typedef std::vector<u8> byte_vector;
 
 namespace Common {
     // draw letter, called by draw_text
@@ -54,10 +58,10 @@ namespace Common {
     void intro();
     // get tegra keys from payload dump
     void get_tegra_keys(Key &sbk, Key &tsec, Key &tsec_root);
-    // print exit in color green or red (fail==true)
-    void wait_to_exit(int status);
+    // print exit
+    void wait_to_exit();
 
     void sha256(const u8 *data, u8 *hash, size_t length);
     // reads "<keyname> = <hexkey>" and returns byte vector
-    std::vector<u8> key_string_to_byte_vector(std::string key_string);
+    byte_vector key_string_to_byte_vector(std::string key_string);
 }

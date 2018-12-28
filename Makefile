@@ -32,12 +32,12 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:=	Lockpick
 APP_AUTHOR	:=	shchmue
-APP_VERSION	:=	1.0
+APP_VERSION	:=	1.1
 
 TARGET		:=	$(subst $e ,_,$(notdir $(APP_TITLE)))
 BUILD		:=	build
 OUTDIR		:=	out
-SOURCES		:=	source
+SOURCES		:=	source source/fatfs source/nx
 DATA		:=	data
 INCLUDES	:=	include
 EXEFS_SRC	:=	exefs_src
