@@ -366,13 +366,15 @@ void KeyCollection::get_memory_keys() {
 
     header_key_source.find_key(FSData.data);
 
-    ESRodata.get_from_memory(ES_TID, SEG_RODATA);
-    for (auto k : es_keys)
-        k->find_key(ESRodata.data);
-
     SSLRodata.get_from_memory(SSL_TID, SEG_RODATA);
     for (auto k : ssl_keys)
         k->find_key(SSLRodata.data);
+
+    if (!kernelAbove200())
+        return;
+    ESRodata.get_from_memory(ES_TID, SEG_RODATA);
+    for (auto k : es_keys)
+        k->find_key(ESRodata.data);
 }
 
 void KeyCollection::derive_keys() {
@@ -435,6 +437,8 @@ void KeyCollection::derive_keys() {
     u32 bytes_read, file_pos = 0;
 
     // dump sd seed
+    if (!kernelAbove200())
+        return;
     FILE *sd_private = fopen("/Nintendo/Contents/private", "rb");
     if (!sd_private) return;
     fread(seed_vector, 0x10, 1, sd_private);
@@ -445,8 +449,13 @@ void KeyCollection::derive_keys() {
     FIL save_file;
 
     fsOpenBisStorage(&storage, 31);
-    if (f_mount(&fs, "", 1) || f_chdir("/save")) return;
-    if (f_open(&save_file, "8000000000000043", FA_READ | FA_OPEN_EXISTING)) return;
+    if (f_mount(&fs, "", 1) ||
+        f_chdir("/save") ||
+        f_open(&save_file, "8000000000000043", FA_READ | FA_OPEN_EXISTING))
+    {
+        fsStorageClose(&storage);
+        return;
+    }
 
     for (;;) {
         fr = f_read(&save_file, buffer, 0x10, &bytes_read);
