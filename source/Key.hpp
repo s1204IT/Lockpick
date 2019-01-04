@@ -54,18 +54,17 @@ public:
     // return CMAC of data
     byte_vector cmac(byte_vector data);
     // find key in buffer by hash, optionally specify start offset
-    void find_key(const byte_vector &buffer);
+    void find_key(const byte_vector &buffer, size_t start = 0);
     // get key encryption key
     byte_vector generate_kek(Key &master_key, const Key &kek_seed, const Key &key_seed);
 
     byte_vector key;
-
-private:
     std::string name;
     u64 xx_hash;
     byte_vector hash;
     u8 length;
     bool is_found = false;
 
+private:
     static size_t saved_key_count;
 };

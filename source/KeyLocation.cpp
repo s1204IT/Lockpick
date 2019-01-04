@@ -16,9 +16,15 @@
 
 #include "KeyLocation.hpp"
 
+#include "Common.hpp"
+#include "xxhash64.h"
+
+#include <algorithm>
+#include <unordered_map>
+
 #include <switch.h>
 
-void KeyLocation::get_from_memory(u64 tid, u8 segMask) {
+void KeyLocation::get_from_memory(u64 tid, u8 seg_mask) {
     Handle debug_handle = INVALID_HANDLE;
     u64 d[8];
 
@@ -62,10 +68,10 @@ void KeyLocation::get_from_memory(u64 tid, u8 segMask) {
     {
         svcQueryDebugProcessMemory(&mem_info, &page_info, debug_handle, addr);
         // weird code to allow for bitmasking segments
-        if ((mem_info.perm & Perm_R) &&
+        if  ((mem_info.perm & Perm_R) &&
             ((mem_info.type & 0xff) >= MemType_CodeStatic) &&
             ((mem_info.type & 0xff) < MemType_Heap) &&
-            ((segment <<= 1) >> 1 & segMask) > 0)
+            ((segment <<= 1) >> 1 & seg_mask) > 0)
         {
             data.resize(data.size() + mem_info.size);
             if(R_FAILED(svcReadDebugProcessMemory(data.data() + data.size() - mem_info.size, debug_handle, mem_info.addr, mem_info.size))) {
@@ -86,4 +92,38 @@ void KeyLocation::get_keyblobs() {
     data.resize(0x200 * KNOWN_KEYBLOBS);
     fsStorageRead(&boot0, KEYBLOB_OFFSET, data.data(), data.size());
     fsStorageClose(&boot0);
+}
+
+void KeyLocation::find_keys(std::vector<Key *> &keys) {
+    if (data.size() == 0)
+        return;
+
+    u8 temp_hash[0x20];
+    size_t key_indices_left = keys.size();
+    u64 hash = 0;
+    std::unordered_map<u64, size_t> hash_index;
+    for (size_t i = 0; i < keys.size(); i++)
+        hash_index[keys[i]->xx_hash] = i;
+
+    // hash every length-sized byte chunk in data until it matches a key hash
+    for (size_t i = 0; i < data.size() - 0x10; i++) {
+        hash = XXHash64::hash(data.data() + i, 0x10, 0);
+        auto search = hash_index.find(hash);
+        if (search == hash_index.end()) {
+            continue;
+        }
+        size_t key_index = hash_index[hash];
+        u8 key_length = keys[key_index]->length;
+        // double-check sha256 since xxhash64 isn't as collision-safe
+        Common::sha256(data.data() + i, temp_hash, key_length);
+        if (!std::equal(keys[key_index]->hash.begin(), keys[key_index]->hash.end(), temp_hash))
+            continue;
+        std::copy(data.begin() + i, data.begin() + i + key_length, std::back_inserter(keys[key_index]->key));
+        keys[key_index]->is_found = true;
+        key_indices_left--;
+        if (key_indices_left == 0)
+            return;
+        hash_index.erase(hash);
+        i += key_length - 1;
+    }
 }

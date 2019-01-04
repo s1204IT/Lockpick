@@ -124,7 +124,7 @@ byte_vector Key::cmac(byte_vector data) {
     return dest;
 }
 
-void Key::find_key(const byte_vector &buffer) {
+void Key::find_key(const byte_vector &buffer, size_t start) {
     if ((buffer.size() == 0) || (found()))
         return;
 
@@ -136,10 +136,11 @@ void Key::find_key(const byte_vector &buffer) {
             return;
         std::copy(buffer.begin(), buffer.begin() + length, std::back_inserter(key));
         is_found = true;
+        return;
     }
 
     // hash every length-sized byte chunk in buffer until it matches member hash
-    for (size_t i = 0; i < buffer.size() - length; i++) {
+    for (size_t i = start; i < buffer.size() - length; i++) {
         if (xx_hash == XXHash64::hash(buffer.data() + i, length, 0)) {
             // double-check sha256 since xxhash64 isn't as collision-safe
             Common::sha256(buffer.data() + i, temp_hash, length);

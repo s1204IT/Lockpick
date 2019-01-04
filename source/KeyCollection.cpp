@@ -22,9 +22,9 @@
 #include <algorithm>
 #include <chrono>
 #include <functional>
-#include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <stdio.h>
 
@@ -158,10 +158,10 @@ KeyCollection::KeyCollection() {
     sd_card_kek_source = {"sd_card_kek_source", 0xc408d710a3b821eb, {
         0x6B, 0x2E, 0xD8, 0x77, 0xC2, 0xC5, 0x23, 0x34, 0xAC, 0x51, 0xE5, 0x9A, 0xBF, 0xA7, 0xEC, 0x45,
         0x7F, 0x4A, 0x7D, 0x01, 0xE4, 0x62, 0x91, 0xE9, 0xF2, 0xEA, 0xA4, 0x5F, 0x01, 0x1D, 0x24, 0xB7}, 0x10};
-    sd_card_nca_key_source = {"sd_card_nca_key_source", 0xbea347c9f8472947, {
+    sd_card_nca_key_source = {"sd_card_nca_key_source", 0xb026106d9699fec0, { // xxhash of first 0x10 bytes
         0x2E, 0x75, 0x1C, 0xEC, 0xF7, 0xD9, 0x3A, 0x2B, 0x95, 0x7B, 0xD5, 0xFF, 0xCB, 0x08, 0x2F, 0xD0,
         0x38, 0xCC, 0x28, 0x53, 0x21, 0x9D, 0xD3, 0x09, 0x2C, 0x6D, 0xAB, 0x98, 0x38, 0xF5, 0xA7, 0xCC}, 0x20};
-    sd_card_save_key_source = {"sd_card_save_key_source", 0xf87fe8c3688c3022, {
+    sd_card_save_key_source = {"sd_card_save_key_source", 0x9697ba2fec3d3ed1, { // xxhash of first 0x10 bytes
         0xD4, 0x82, 0x74, 0x35, 0x63, 0xD3, 0xEA, 0x5D, 0xCD, 0xC3, 0xB7, 0x4E, 0x97, 0xC9, 0xAC, 0x8A,
         0x34, 0x21, 0x64, 0xFA, 0x04, 0x1A, 0x1D, 0xC8, 0x0F, 0x17, 0xF6, 0xD3, 0x1E, 0x4B, 0xC0, 0x1C}, 0x20};
 
@@ -195,10 +195,6 @@ KeyCollection::KeyCollection() {
     };
 
     fs_rodata_keys = {
-        &bis_kek_source,
-        &bis_key_source_00,
-        &bis_key_source_01,
-        &bis_key_source_02,
         &header_kek_source,
         &key_area_key_application_source,
         &key_area_key_ocean_source,
@@ -216,24 +212,9 @@ KeyCollection::KeyCollection() {
         });
     }
 
-    package1ldr_keys = {
-        &keyblob_mac_key_source,
-        &master_key_source,
-        &per_console_key_source
-    };
-
     ssl_keys = {
         &ssl_rsa_kek_source_x,
         &ssl_rsa_kek_source_y
-    };
-
-    tz_keys = {
-        &aes_kek_generation_source,
-        &package2_key_source,
-        &titlekek_source,
-        &retail_specific_aes_key_source,
-        &aes_kek_seed_01,
-        &aes_kek_seed_03
     };
 };
 
@@ -361,15 +342,22 @@ void KeyCollection::get_memory_keys() {
     FSRodata.get_from_memory(FS_TID, SEG_RODATA);
     FSData.get_from_memory(FS_TID, SEG_DATA);
 
-    for (auto k : fs_rodata_keys)
-        k->find_key(FSRodata.data);
+    FSRodata.find_keys(fs_rodata_keys);
 
-    header_key_source.find_key(FSData.data);
+    size_t i = 0;
+    /*for ( ; i < FSData.data.size(); i++) {
+        // speeds things up but i'm not 100% sure this is always here
+        if (*reinterpret_cast<u128 *>(FSData.data.data() + i) == 0x10001)
+            break;
+    }*/
+    header_key_source.find_key(FSData.data, i);
 
     SSLRodata.get_from_memory(SSL_TID, SEG_RODATA);
+    // using find_keys on these is actually slower
     for (auto k : ssl_keys)
         k->find_key(SSLRodata.data);
 
+    // firmware 1.0.0 doesn't have the ES keys
     if (!kernelAbove200())
         return;
     ESRodata.get_from_memory(ES_TID, SEG_RODATA);
@@ -558,7 +546,7 @@ void KeyCollection::get_titlekeys() {
     esListCommonTicket(&ids_written, common_rights_ids, sizeof(common_rights_ids));
     esListPersonalizedTicket(&ids_written, personalized_rights_ids, sizeof(personalized_rights_ids));
     esExit();
-    if ((common_count == 0) && (personalized_count == 0))
+    if (common_count + personalized_count == 0)
         return;
 
     /*
@@ -567,7 +555,7 @@ void KeyCollection::get_titlekeys() {
         this would be fine, except we have to match the exact list so we don't stop too early
     */
     char titlekey_block[0x100], buffer[TITLEKEY_BUFFER_SIZE], rights_id_string[0x21], titlekey_string[0x21];
-    std::set<std::string> rights_ids;
+    std::unordered_set<std::string> rights_ids;
     for (size_t i = 0; i < common_count; i++) {
         for (size_t j = 0; j < 0x10; j++) {
             sprintf(&rights_id_string[j*2], "%02x", common_rights_ids[i].c[j]);
@@ -620,7 +608,7 @@ void KeyCollection::get_titlekeys() {
                     for (size_t k = 0; k < 0x10; k++)
                         sprintf(&rights_id_string[k*2], "%02x", buffer[j + 0x2a0 + k]);
 
-                    // skip if rights id found but not reported by es
+                    // skip if rights id not reported by es
                     if (rights_ids.find(rights_id_string) == rights_ids.end())
                         continue;
                     // skip if rights id already in map
@@ -648,8 +636,18 @@ void KeyCollection::get_titlekeys() {
         for (size_t i = 0; i < bytes_read; i += 0x4000) {
             for (size_t j = i; j < i + 0x4000; j += 0x400) {
                 if (*reinterpret_cast<u32 *>(&buffer[j]) == 0x10004) {
+                    for (size_t k = 0; k < 0x10; k++)
+                        sprintf(&rights_id_string[k*2], "%02x", buffer[j + 0x2a0 + k]);
+
+                    // skip if rights id not reported by es
+                    if (rights_ids.find(rights_id_string) == rights_ids.end())
+                        continue;
+                    // skip if rights id already in map
+                    if (titlekeys.find(rights_id_string) != titlekeys.end())
+                        continue;
+
                     std::copy(buffer + j + 0x180, buffer + j + 0x280, titlekey_block);
-                    
+
                     splUserExpMod(titlekey_block, N, D, 0x100, M);
 
                     // decrypts the titlekey from personalized ticket
@@ -664,16 +662,6 @@ void KeyCollection::get_titlekeys() {
 
                     // verify it starts with hash of null string
                     if (!std::equal(db, db + 0x20, null_hash))
-                        continue;
-
-                    for (size_t k = 0; k < 0x10; k++)
-                        sprintf(&rights_id_string[k*2], "%02x", buffer[j + 0x2a0 + k]);
-
-                    // skip if rights id found but not reported by es
-                    if (rights_ids.find(rights_id_string) == rights_ids.end())
-                        continue;
-                    // skip if rights id already in map
-                    if (titlekeys.find(rights_id_string) != titlekeys.end())
                         continue;
 
                     for (size_t k = 0; k < 0x10; k++)

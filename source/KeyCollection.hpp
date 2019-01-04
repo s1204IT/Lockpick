@@ -113,7 +113,7 @@ private:
         titlekek;
 
     std::vector<Key *>
-        es_keys, fs_rodata_keys, package1ldr_keys, ssl_keys, tz_keys;
+        es_keys, fs_rodata_keys, ssl_keys;
 
     // hash of empty string used to verify titlekeys for personalized tickets
     static const u8 null_hash[0x20];

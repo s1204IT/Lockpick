@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "Key.hpp"
+
 #include <vector>
 
 #include <switch/types.h>
@@ -44,9 +46,11 @@ typedef std::vector<u8> byte_vector;
 class KeyLocation {
 public:
     // get memory in requested segments from running title
-    void get_from_memory(u64 tid, u8 segMask);
+    void get_from_memory(u64 tid, u8 seg_mask);
     // get keyblobs from BOOT0
     void get_keyblobs();
+    // locate keys in data
+    void find_keys(std::vector<Key *> &keys);
 
     // data found by get functions
     byte_vector data;
