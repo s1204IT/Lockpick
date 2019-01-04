@@ -34,8 +34,16 @@
 
 #include "sha256.h"
 
+#ifdef RGBX8
+    #define LIBNX_200
+#endif
+
 namespace Common {
     static u32 framebuf_width = 0;
+#ifdef LIBNX_200
+    static Framebuffer fb;
+    static u32 stride;
+#endif
     static u32 *framebuf;
     // FreeType vars
     static FT_Library library;
@@ -111,7 +119,9 @@ namespace Common {
 
         PlFontData font;
 
+#ifndef LIBNX_200
         consoleInit(NULL);
+#endif
 
         plGetSharedFontByType(&font, PlSharedFontType_Standard);
 
@@ -119,10 +129,18 @@ namespace Common {
         FT_New_Memory_Face(library, static_cast<FT_Byte *>(font.address), font.size, 0, &face);
         FT_Set_Char_Size(face, 0, 6*64, 300, 300);
 
-        gfxSetMode(GfxMode_LinearDouble); // todo: update for nwindow/framebuffer
+#ifdef LIBNX_200
+        framebufferCreate(&fb, nwindowGetDefault(), FB_WIDTH, FB_HEIGHT, PIXEL_FORMAT_RGBA_8888, 2);
+        framebufferMakeLinear(&fb);
+        framebuf = (u32 *)framebufferBegin(&fb, &stride);
+        framebuf_width = stride / sizeof(u32);
+        memset(framebuf, 0, stride*FB_HEIGHT);
+        framebufferEnd(&fb);
+#else
+        gfxSetMode(GfxMode_LinearDouble);
         framebuf = (u32 *)gfxGetFramebuffer(&framebuf_width, NULL);
         memset(framebuf, 0, gfxGetFramebufferSize());
-        
+#endif
         draw_text(0x10, 0x020, YELLOW, "Lockpick! by shchmue");
 
         draw_set_rect(814, 452 + 42 * 0, 450, 42, FLAG_RED);
@@ -148,7 +166,7 @@ namespace Common {
         draw_text(0x10, 0x0e0, CYAN, "Saving keys to keyfile...");
         draw_text(0x10, 0x110, CYAN, "Total time elapsed:");
 
-        consoleUpdate(NULL);
+        update_display();
     }
 
     void get_tegra_keys(Key &sbk, Key &tsec, Key &tsec_root) {
@@ -206,15 +224,27 @@ namespace Common {
             u64 kDown = hidKeysDown(CONTROLLER_P1_AUTO);
             if (kDown & KEY_PLUS) break;
 
-            consoleUpdate(NULL);
+            update_display();
         }
 
+#ifdef LIBNX_200
+        framebufferClose(&fb);
+#else
+        consoleExit(NULL);
+#endif
         FT_Done_Face(face);
         FT_Done_FreeType(library);
 
-        consoleExit(NULL);
-
         appletUnlockExit();
+    }
+
+    void update_display() {
+#ifdef LIBNX_200
+        framebufferBegin(&fb, &stride);
+        framebufferEnd(&fb);
+#else
+        consoleUpdate(NULL);
+#endif
     }
 
     void sha256(const u8 *data, u8 *hash, size_t length) {

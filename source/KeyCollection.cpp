@@ -251,16 +251,16 @@ void KeyCollection::get_keys() {
     char keys_str[32];
     sprintf(keys_str, "Total keys found: %lu", Key::get_saved_key_count());
     Common::draw_text(0x2a0, 0x110, CYAN, keys_str);
-    Common::draw_text(0x80, 0x140, GREEN, "Keys saved to \"/switch/prod.keys\"!");
+    Common::draw_text(0x80, 0x140, YELLOW, "Keys saved to \"/switch/prod.keys\"!");
 
     Common::draw_text(0x10, 0x170, CYAN, "Dumping titlekeys...");
-    consoleUpdate(NULL);
+    Common::update_display();
     profiler_time = profile(&KeyCollection::get_titlekeys, *this);
     Common::draw_text_with_time(0x10, 0x170, GREEN, "Dumping titlekeys...", profiler_time);
     sprintf(keys_str, "Titlekeys found: %lu", titlekeys_dumped);
     Common::draw_text(0x2a0, 0x170, CYAN, keys_str);
     if (titlekeys_dumped > 0)
-        Common::draw_text(0x80, 0x1a0, GREEN, "Titlekeys saved to \"/switch/title.keys\"!");
+        Common::draw_text(0x80, 0x1a0, YELLOW, "Titlekeys saved to \"/switch/title.keys\"!");
     else
         Common::draw_text(0x80, 0x1a0, GREEN, "No titlekeys found. Either you've never played or installed a game or dump failed.");
 }

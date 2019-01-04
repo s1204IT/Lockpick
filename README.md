@@ -34,7 +34,7 @@ Notes
 
 Building
 =
-Release built with `libnx v1.6.0`.
+Release built with `libnx v2.0.0` but still builds and runs with `v1.6.0`.
 
 Uses `freetype` which comes with `switch-portlibs` via `devkitPro pacman`:
 ```

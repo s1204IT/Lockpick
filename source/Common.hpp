@@ -24,6 +24,9 @@
 
 #include <switch/types.h>
 
+#define FB_WIDTH  1280
+#define FB_HEIGHT 720
+
 #define GREEN   RGBA8_MAXALPHA(0, 0xff, 0)
 #define RED     RGBA8_MAXALPHA(0xff, 0, 0)
 #define CYAN    RGBA8_MAXALPHA(0, 0xff, 0xff)
@@ -60,6 +63,9 @@ namespace Common {
     void get_tegra_keys(Key &sbk, Key &tsec, Key &tsec_root);
     // print exit
     void wait_to_exit();
+
+    // refresh display
+    void update_display();
 
     void sha256(const u8 *data, u8 *hash, size_t length);
     // reads "<keyname> = <hexkey>" and returns byte vector
