@@ -32,7 +32,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:=	Lockpick
 APP_AUTHOR	:=	shchmue
-APP_VERSION	:=	1.2
+APP_VERSION	:=	1.2.1
 
 TARGET		:=	$(subst $e ,_,$(notdir $(APP_TITLE)))
 BUILD		:=	build
