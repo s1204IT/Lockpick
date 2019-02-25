@@ -369,10 +369,32 @@ void KeyCollection::derive_keys() {
     header_key = {"header_key", 0x20, {}};
     if (header_kek_source.found() && header_key_source.found()) {
         u8 tempheaderkek[0x10], tempheaderkey[0x20];
+        splCryptoInitialize();
         splCryptoGenerateAesKek(header_kek_source.key.data(), 0, 0, tempheaderkek);
-        splCryptoGenerateAesKey(tempheaderkek, header_key_source.key.data(), tempheaderkey);
+        splCryptoGenerateAesKey(tempheaderkek, header_key_source.key.data() + 0x00, tempheaderkey + 0x00);
         splCryptoGenerateAesKey(tempheaderkek, header_key_source.key.data() + 0x10, tempheaderkey + 0x10);
-        header_key = {"header_key", 0x20, byte_vector(&tempheaderkey[0], &tempheaderkey[0x20])};
+        header_key = {"header_key", 0x20, byte_vector(tempheaderkey, tempheaderkey + 0x20)};
+        splCryptoExit();
+    }
+
+    if (bis_key_source_00.found() && bis_key_source_01.found() && bis_key_source_02.found()) {
+        u8 tempbiskek[0x10], tempbiskey[0x20];
+        splFsInitialize();
+        splFsGenerateSpecificAesKey(bis_key_source_00.key.data() + 0x00, 0, 0, tempbiskey + 0x00);
+        splFsGenerateSpecificAesKey(bis_key_source_00.key.data() + 0x10, 0, 0, tempbiskey + 0x10);
+        bis_key.push_back(Key {"bis_key_00", 0x20, byte_vector(tempbiskey, tempbiskey + 0x20)});
+        splFsExit();
+
+        splCryptoInitialize();
+        splCryptoGenerateAesKek(bis_kek_source.key.data(), 0, 1, tempbiskek);
+        splCryptoGenerateAesKey(tempbiskek, bis_key_source_01.key.data() + 0x00, tempbiskey + 0x00);
+        splCryptoGenerateAesKey(tempbiskek, bis_key_source_01.key.data() + 0x10, tempbiskey + 0x10);
+        bis_key.push_back(Key {"bis_key_01", 0x20, byte_vector(tempbiskey, tempbiskey + 0x20)});
+        splCryptoGenerateAesKey(tempbiskek, bis_key_source_02.key.data() + 0x00, tempbiskey + 0x00);
+        splCryptoGenerateAesKey(tempbiskek, bis_key_source_02.key.data() + 0x10, tempbiskey + 0x10);
+        bis_key.push_back(Key {"bis_key_02", 0x20, byte_vector(tempbiskey, tempbiskey + 0x20)});
+        bis_key.push_back(Key {"bis_key_03", 0x20, bis_key[2].key});
+        splCryptoExit();
     }
 
     for (u8 i = 0; i < aes_kek_generation_source.key.size(); i++) {
@@ -388,15 +410,6 @@ void KeyCollection::derive_keys() {
     if (device_key.found() && save_mac_kek_source.found() && save_mac_key_source.found()) {
         Key kek = {save_mac_kek_source.generate_kek(device_key, aes_kek_generation_source, Key {}), 0x10};
         save_mac_key = Key {"save_mac_key", 0x10, kek.aes_decrypt_ecb(save_mac_key_source.key)};
-    }
-
-    if (device_key.found()) {
-        Key kek = {device_key.aes_decrypt_ecb(retail_specific_aes_key_source.key), 0x10};
-        bis_key.push_back(Key {"bis_key_00", 0x20, kek.aes_decrypt_ecb(bis_key_source_00.key)});
-        kek = Key {bis_kek_source.generate_kek(device_key, aes_kek_generation_source, aes_key_generation_source), 0x10};
-        bis_key.push_back(Key {"bis_key_01", 0x20, kek.aes_decrypt_ecb(bis_key_source_01.key)});
-        bis_key.push_back(Key {"bis_key_02", 0x20, kek.aes_decrypt_ecb(bis_key_source_02.key)});
-        bis_key.push_back(Key {"bis_key_03", 0x20, bis_key[2].key});\
     }
 
     char keynum[] = "00";
@@ -467,11 +480,11 @@ void KeyCollection::save_keys() {
     aes_kek_generation_source.save_key(key_file);
     aes_key_generation_source.save_key(key_file);
     bis_kek_source.save_key(key_file);
+    for (auto k : bis_key)
+        k.save_key(key_file);
     bis_key_source_00.save_key(key_file);
     bis_key_source_01.save_key(key_file);
     bis_key_source_02.save_key(key_file);
-    for (auto k : bis_key)
-        k.save_key(key_file);
     device_key.save_key(key_file);
     eticket_rsa_kek.save_key(key_file);
     for (auto k : es_keys)
@@ -516,11 +529,11 @@ void KeyCollection::save_keys() {
     save_mac_kek_source.save_key(key_file);
     save_mac_key.save_key(key_file);
     save_mac_key_source.save_key(key_file);
-    sbk.save_key(key_file);
     sd_card_kek_source.save_key(key_file);
     sd_card_nca_key_source.save_key(key_file);
     sd_card_save_key_source.save_key(key_file);
     sd_seed.save_key(key_file);
+    sbk.save_key(key_file);
     ssl_rsa_kek.save_key(key_file);
     for (auto k : ssl_keys)
         k->save_key(key_file);

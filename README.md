@@ -2,13 +2,15 @@ Lockpick
 =
 Lockpick is a ground-up C++17 rewrite of homebrew key derivation software, namely [kezplez-nx](https://github.com/tesnos/kezplez-nx). It also dumps titlekeys. This will dump all keys through `*_key_05` on firmwares below `6.2.0` and through `*_key_06` on `6.2.0`.
 
+Due to key generation changes introduced in `7.0.0`, Lockpick is not able to dump keys ending in 07 at all. Furthermore, unfortunately the public method to dump `tsec_root_key` is only available on firmware `6.2.0` so `7.x` consoles can only dump through keys ending in 05.
+
 What this software does differently
 =
 * Dumps `titlekeys` and SD seed
 * Dumps all keys through `6.2.0`
 * Uses the superfast `xxHash` instead of `sha256` when searching exefs for keys for a ~5x speed improvement
 * Gets all possible keys from running process memory - this means no need to decrypt `Package2` at all, let alone decompress `KIP`s
-* Gets `header_key` without `tsec`, `sbk`, `master_key_00` or `aes` sources - which may or may not be the same way `ChoiDujourNX` does it :eyes: (and I'm gonna issue a challenge to homebrew title installers to implement similar code so you don't need your users to use separate software like this :stuck_out_tongue_winking_eye: it's up to you to figure out if the same can be done for `key_area_keys` if needed)
+* Gets bis keys and `header_key` without `tsec`, `sbk`, `master_key_00` or `aes` sources. Shoutout to exelix11 for using this method in [SwitchThemeInjector](https://github.com/exelix11/SwitchThemeInjector)! Homebrew devs should be doing this instead of requiring users to provide key files!
 
 Usage
 =

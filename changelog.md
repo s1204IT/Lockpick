@@ -1,4 +1,11 @@
 # Changelog
+## Version 1.2.1
+* Generate bis keys without master keys
+* Update file size check to support Hekate v4.8 TSEC dump
+* Fixed prod.keys alphabetization error
+* Fixed build warning for ff.c
+* Added in-app disclaimer about which keys can be dumped
+
 ## Version 1.2
 * Update for libnx v2.0.0 compatibility and still runs when built with v1.6.0
   * The binary got even smaller!

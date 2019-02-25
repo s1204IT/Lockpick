@@ -141,7 +141,9 @@ namespace Common {
         framebuf = (u32 *)gfxGetFramebuffer(&framebuf_width, NULL);
         memset(framebuf, 0, gfxGetFramebufferSize());
 #endif
-        draw_text(0x10, 0x020, YELLOW, "Lockpick! by shchmue");
+        draw_text(0x010, 0x020, YELLOW, "Lockpick! by shchmue");
+        draw_text(0x190, 0x020, YELLOW, "Note: Only dumps keys 00-06 on 6.2.0");
+        draw_text(0x190, 0x040, YELLOW, " and keys 00-05 on all other firmwares including 7.0.0+");
 
         draw_set_rect(814, 452 + 42 * 0, 450, 42, FLAG_RED);
         draw_set_rect(814, 452 + 42 * 1, 450, 42, FLAG_ORANGE);
@@ -185,7 +187,7 @@ namespace Common {
                         sbk = Key("secure_boot_key", 0x10, temp_key);
                         fclose(fuse_file);
                     }
-                    else if (!tsec.found() && (p.file_size() == 0x30) &&
+                    else if (!tsec.found() && (p.file_size() == 0x20 || p.file_size() == 0x30) &&
                         (std::string("tsec").compare(std::string(p.path().filename()).substr(0, 4)) == 0))
                     {
                         FILE *tsec_file = fopen(p.path().c_str(), "rb");

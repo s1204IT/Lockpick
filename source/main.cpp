@@ -23,7 +23,6 @@ extern "C" void userAppInit()
 {
     plInitialize();
     pmdmntInitialize();
-    splCryptoInitialize();
     splInitialize();
 }
 
@@ -31,7 +30,6 @@ extern "C" void userAppExit()
 {
     plExit();
     pmdmntExit();
-    splCryptoExit();
     splExit();
 }
 
