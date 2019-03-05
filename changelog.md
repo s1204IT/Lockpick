@@ -1,4 +1,9 @@
 # Changelog
+## Version 1.2.2
+* Do not overwrite existing keyfile that contains master_key_07
+* Read eticket_rsa_kek from existing keyfile in case user is only running this for titlekeys
+* Create /switch folder if needed
+
 ## Version 1.2.1
 * Generate bis keys without master keys
 * Update file size check to support Hekate v4.8 TSEC dump

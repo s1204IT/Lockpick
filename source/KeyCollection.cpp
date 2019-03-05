@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <filesystem>
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -228,8 +229,8 @@ void KeyCollection::get_keys() {
     } else {
         Common::draw_text(0x010, 0x60, RED, "Get Tegra keys...");
         Common::draw_text(0x190, 0x60, RED, "Failed");
-        Common::draw_text(0x190, 0x20, RED, "Warning: Saving limited keyset.");
-        Common::draw_text(0x190, 0x40, RED, "Dump Tegra keys with payload and run again to get all keys.");
+        Common::draw_text(0x2a0, 0x60, RED, "Warning: Saving limited keyset.");
+        Common::draw_text(0x2a0, 0x80, RED, "Dump TSEC and Fuses with Hekate.");
     }
 
     profiler_time = profile(&KeyCollection::get_memory_keys, *this);
@@ -241,8 +242,31 @@ void KeyCollection::get_keys() {
     profiler_time = profile(&KeyCollection::derive_keys, *this);
     Common::draw_text_with_time(0x10, 0x0c0, GREEN, "Derive remaining keys...", profiler_time);
 
-    profiler_time = profile(&KeyCollection::save_keys, *this);
-    Common::draw_text_with_time(0x10, 0x0e0, GREEN, "Saving keys to keyfile...", profiler_time);
+    // avoid crash on CFWs that don't use /switch folder
+    if (!std::filesystem::exists("/switch"))
+        std::filesystem::create_directory("/switch");
+    // since Lockpick_RCM can dump newer keys, check for existing keyfile
+    bool Lockpick_RCM_file_found = false;
+    if (std::filesystem::exists("/switch/prod.keys")) {
+        FILE *key_file = fopen("/switch/prod.keys", "r");
+        char line[0x200];
+        while (fgets(line, sizeof(line), key_file)) {
+            if (strncmp("master_key_07", line, 13) == 0) {
+                Lockpick_RCM_file_found = true;
+            } else if (!eticket_rsa_kek.found() && (strncmp("eticket_rsa_kek", line, 15)) == 0) {
+                // grab eticket_rsa_kek from existing file to make sure we can dump titlekeys
+                eticket_rsa_kek = Key("eticket_rsa_kek", 0x10, Common::key_string_to_byte_vector(line));
+            }
+        }
+        fclose(key_file);
+    }
+    if (!Lockpick_RCM_file_found) {
+        profiler_time = profile(&KeyCollection::save_keys, *this);
+        Common::draw_text_with_time(0x10, 0x0e0, GREEN, "Saving keys to keyfile...", profiler_time);
+    } else {
+        Common::draw_text(0x10, 0x0e0, YELLOW, "Saving keys to keyfile...");
+        Common::draw_text(0x190, 0x0e0, YELLOW, "Newer keyfile found. Skipped overwriting keys");
+    }
 
     total_time.stop();
     Common::draw_line(0x8, 0xf0, 0x280, GREEN);

@@ -142,8 +142,8 @@ namespace Common {
         memset(framebuf, 0, gfxGetFramebufferSize());
 #endif
         draw_text(0x010, 0x020, YELLOW, "Lockpick! by shchmue");
-        draw_text(0x190, 0x020, YELLOW, "Note: Only dumps keys 00-06 on 6.2.0");
-        draw_text(0x190, 0x040, YELLOW, " and keys 00-05 on all other firmwares including 7.0.0+");
+        draw_text(0x190, 0x020, YELLOW, "Note: This can only dump keys 00-05 (or 00-06 on 6.2.0)");
+        draw_text(0x190, 0x040, YELLOW, "Use Lockpick_RCM for newer keys on firmware 7.0.0+!");
 
         draw_set_rect(814, 452 + 42 * 0, 450, 42, FLAG_RED);
         draw_set_rect(814, 452 + 42 * 1, 450, 42, FLAG_ORANGE);
