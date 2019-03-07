@@ -12,7 +12,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 # Also see "include/mbedtls/config.h"
 
 ARCH	:=	-march=armv8-a+crypto -mtune=cortex-a57 -mtp=soft -fPIE
-CFLAGS	:=  -g -Wall -O3 -ffunction-sections $(ARCH) $(DEFINES) 
+CFLAGS	:=  -g -Wall -O3 -ffunction-sections $(ARCH) $(DEFINES)
 CFLAGS	+=	-I ../include -D__SWITCH__
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 ASFLAGS	:=	-g $(ARCH)

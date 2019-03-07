@@ -19,7 +19,7 @@ extern "C" {
 #define unlikely(x)    __builtin_expect(!!(x), 0)
 
 void sha256_block_data_order (uint32_t *ctx, const void *in, size_t num);
-  
+
 int sha256_init(struct sha256_state *sctx)
 {
 	sctx->state[0] = SHA256_H0;

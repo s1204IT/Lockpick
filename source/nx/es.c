@@ -57,7 +57,7 @@ Result esCountCommonTicket(u32 *num_tickets)
         }
     }
 
-    return rc;  
+    return rc;
 }
 
 Result esCountPersonalizedTicket(u32 *num_tickets)
@@ -94,23 +94,23 @@ Result esCountPersonalizedTicket(u32 *num_tickets)
         }
     }
 
-    return rc;  
+    return rc;
 }
 
 Result esListCommonTicket(u32 *numRightsIdsWritten, NcmRightsId *outBuf, size_t bufSize) {
     IpcCommand c;
     ipcInitialize(&c);
     ipcAddRecvBuffer(&c, outBuf, bufSize, BufferType_Normal);
-    
+
     struct {
         u64 magic;
         u64 cmd_id;
     } *raw;
-    
+
     raw = ipcPrepareHeader(&c, sizeof(*raw));
     raw->magic = SFCI_MAGIC;
     raw->cmd_id = 11;
-    
+
     Result rc = serviceIpcDispatch(&g_esSrv);
 
     if (R_SUCCEEDED(rc)) {
@@ -129,7 +129,7 @@ Result esListCommonTicket(u32 *numRightsIdsWritten, NcmRightsId *outBuf, size_t 
             if (numRightsIdsWritten) *numRightsIdsWritten = resp->num_rights_ids_written;
         }
     }
-    
+
     return rc;
 }
 
@@ -137,16 +137,16 @@ Result esListPersonalizedTicket(u32 *numRightsIdsWritten, NcmRightsId *outBuf, s
     IpcCommand c;
     ipcInitialize(&c);
     ipcAddRecvBuffer(&c, outBuf, bufSize, BufferType_Normal);
-    
+
     struct {
         u64 magic;
         u64 cmd_id;
     } *raw;
-    
+
     raw = ipcPrepareHeader(&c, sizeof(*raw));
     raw->magic = SFCI_MAGIC;
     raw->cmd_id = 12;
-    
+
     Result rc = serviceIpcDispatch(&g_esSrv);
 
     if (R_SUCCEEDED(rc)) {
@@ -165,6 +165,6 @@ Result esListPersonalizedTicket(u32 *numRightsIdsWritten, NcmRightsId *outBuf, s
             if (numRightsIdsWritten) *numRightsIdsWritten = resp->num_rights_ids_written;
         }
     }
-    
+
     return rc;
 }

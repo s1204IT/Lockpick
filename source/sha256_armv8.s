@@ -24,7 +24,7 @@ sha256_block_data_order:
     str       q9, [sp, #32]
     str       q10, [sp, #48]
     ld1       {v28.4s-v31.4s}, [x3], #64
-    
+
 .Lsha256loop:
 
     ld1       {v5.16b-v8.16b}, [x1], #64

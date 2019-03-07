@@ -89,7 +89,7 @@ byte_vector Key::aes_decrypt_ctr(const byte_vector &data, byte_vector iv) {
     // used internally
     size_t nc_off = 0;
     u8 stream_block[0x10];
-    
+
     mbedtls_aes_context dec;
     mbedtls_aes_init(&dec);
     mbedtls_aes_setkey_enc(&dec, key.data(), length * 8);

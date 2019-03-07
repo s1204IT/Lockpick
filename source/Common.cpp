@@ -89,7 +89,7 @@ namespace Common {
             }
 
             glyph_index = FT_Get_Char_Index(face, (FT_ULong)str[i]);
-            
+
             if (R_FAILED(FT_Load_Glyph(face, glyph_index, FT_LOAD_COLOR) ||
                 FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL) != 0))
             {

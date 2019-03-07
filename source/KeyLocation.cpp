@@ -82,7 +82,6 @@ void KeyLocation::get_from_memory(u64 tid, u8 seg_mask) {
         addr = mem_info.addr + mem_info.size;
         if (addr == 0) break;
     }
-    
     svcCloseHandle(debug_handle);
 }
 
