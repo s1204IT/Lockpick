@@ -32,18 +32,10 @@
 
 #include <switch.h>
 
-#include "sha256.h"
-
-#ifdef RGBX8
-    #define LIBNX_200
-#endif
-
 namespace Common {
     static u32 framebuf_width = 0;
-#ifdef LIBNX_200
     static Framebuffer fb;
     static u32 stride;
-#endif
     static u32 *framebuf;
     // FreeType vars
     static FT_Library library;
@@ -119,28 +111,19 @@ namespace Common {
 
         PlFontData font;
 
-#ifndef LIBNX_200
-        consoleInit(NULL);
-#endif
-
         plGetSharedFontByType(&font, PlSharedFontType_Standard);
 
         FT_Init_FreeType(&library);
         FT_New_Memory_Face(library, static_cast<FT_Byte *>(font.address), font.size, 0, &face);
         FT_Set_Char_Size(face, 0, 6*64, 300, 300);
 
-#ifdef LIBNX_200
         framebufferCreate(&fb, nwindowGetDefault(), FB_WIDTH, FB_HEIGHT, PIXEL_FORMAT_RGBA_8888, 2);
         framebufferMakeLinear(&fb);
         framebuf = (u32 *)framebufferBegin(&fb, &stride);
         framebuf_width = stride / sizeof(u32);
         memset(framebuf, 0, stride*FB_HEIGHT);
         framebufferEnd(&fb);
-#else
-        gfxSetMode(GfxMode_LinearDouble);
-        framebuf = (u32 *)gfxGetFramebuffer(&framebuf_width, NULL);
-        memset(framebuf, 0, gfxGetFramebufferSize());
-#endif
+
         draw_text(0x010, 0x020, YELLOW, "Lockpick! by shchmue");
         draw_text(0x190, 0x020, YELLOW, "Note: This can only dump keys 00-05 (or 00-06 on 6.2.0)");
         draw_text(0x190, 0x040, YELLOW, "Use Lockpick_RCM for newer keys on firmware 7.0.0+!");
@@ -229,11 +212,7 @@ namespace Common {
             update_display();
         }
 
-#ifdef LIBNX_200
         framebufferClose(&fb);
-#else
-        consoleExit(NULL);
-#endif
         FT_Done_Face(face);
         FT_Done_FreeType(library);
 
@@ -241,20 +220,8 @@ namespace Common {
     }
 
     void update_display() {
-#ifdef LIBNX_200
         framebufferBegin(&fb, &stride);
         framebufferEnd(&fb);
-#else
-        consoleUpdate(NULL);
-#endif
-    }
-
-    void sha256(const u8 *data, u8 *hash, size_t length) {
-        struct sha256_state ctx;
-        sha256_init(&ctx);
-        sha256_update(&ctx, data, length);
-        sha256_finalize(&ctx);
-        sha256_finish(&ctx, hash);
     }
 
     byte_vector key_string_to_byte_vector(std::string key_string) {

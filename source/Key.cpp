@@ -19,11 +19,9 @@
 #include <algorithm>
 #include <vector>
 
-#include <mbedtls/aes.h>
-#include <mbedtls/cmac.h>
-
-#include "Common.hpp"
 #include "xxhash64.h"
+
+#include <switch.h>
 
 size_t Key::saved_key_count = 0;
 
@@ -86,16 +84,9 @@ byte_vector Key::aes_decrypt_ctr(const byte_vector &data, byte_vector iv) {
     if (!found())
         return dest;
 
-    // used internally
-    size_t nc_off = 0;
-    u8 stream_block[0x10];
-
-    mbedtls_aes_context dec;
-    mbedtls_aes_init(&dec);
-    mbedtls_aes_setkey_enc(&dec, key.data(), length * 8);
-    mbedtls_aes_crypt_ctr(&dec, data.size(), &nc_off, iv.data(), stream_block, data.data(), dest.data());
-    mbedtls_aes_free(&dec);
-
+    Aes128CtrContext con;
+    aes128CtrContextCreate(&con, key.data(), iv.data());
+    aes128CtrCrypt(&con, dest.data(), data.data(), data.size());
     return dest;
 }
 
@@ -104,13 +95,10 @@ byte_vector Key::aes_decrypt_ecb(const byte_vector &data) {
     if (!found())
         return dest;
 
-    mbedtls_aes_context dec;
-    mbedtls_aes_init(&dec);
-    mbedtls_aes_setkey_dec(&dec, key.data(), length * 8);
+    Aes128Context con;
+    aes128ContextCreate(&con, key.data(), false);
     for (size_t offset = 0; offset < data.size(); offset += 0x10)
-        mbedtls_aes_crypt_ecb(&dec, MBEDTLS_AES_DECRYPT, data.data() + offset, dest.data() + offset);
-    mbedtls_aes_free(&dec);
-
+        aes128DecryptBlock(&con, dest.data() + offset, data.data() + offset);
     return dest;
 }
 
@@ -119,8 +107,7 @@ byte_vector Key::cmac(byte_vector data) {
     if (!found())
         return dest;
 
-    mbedtls_cipher_cmac(mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_128_ECB), key.data(), length * 8, data.data(), data.size(), dest.data());
-
+    cmacAes128CalculateMac(dest.data(), key.data(), data.data(), data.size());
     return dest;
 }
 
@@ -131,7 +118,7 @@ void Key::find_key(const byte_vector &buffer, size_t start) {
     u8 temp_hash[0x20];
 
     if (buffer.size() == length) {
-        Common::sha256(buffer.data(), temp_hash, length);
+        sha256CalculateHash(temp_hash, buffer.data(), length);
         if (!std::equal(hash.begin(), hash.end(), temp_hash))
             return;
         std::copy(buffer.begin(), buffer.begin() + length, std::back_inserter(key));
@@ -143,7 +130,7 @@ void Key::find_key(const byte_vector &buffer, size_t start) {
     for (size_t i = start; i < buffer.size() - length; i++) {
         if (xx_hash == XXHash64::hash(buffer.data() + i, length, 0)) {
             // double-check sha256 since xxhash64 isn't as collision-safe
-            Common::sha256(buffer.data() + i, temp_hash, length);
+            sha256CalculateHash(temp_hash, buffer.data() + i, length);
             if (!std::equal(hash.begin(), hash.end(), temp_hash))
                 continue;
             std::copy(buffer.begin() + i, buffer.begin() + i + length, std::back_inserter(key));

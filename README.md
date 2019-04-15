@@ -36,7 +36,7 @@ Notes
 
 Building
 =
-Release built with `libnx v2.0.0` but still builds and runs with `v1.6.0`.
+Release built with [libnx commit d2e2c15](https://github.com/switchbrew/libnx/tree/d2e2c159374f18c22350846019f2a615cb35b523).
 
 Uses `freetype` which comes with `switch-portlibs` via `devkitPro pacman`:
 ```
@@ -59,13 +59,12 @@ Special Thanks
 * Shouts out to fellow key derivers: shadowninja108 for [HACGUI](https://github.com/shadowninja108/HACGUI), Thealexbarney for [Libhac](https://github.com/Thealexbarney/LibHac), and [rajkosto](https://github.com/rajkosto/) :eyes:
 * [misson2000](https://github.com/misson20000) for help with `std::invoke` to get the function timer working
 * [Simon](https://github.com/simontime) for the `eticket_rsa_kek` derivation method and for suggesting invoking `spl` for faster titlekey derivation
+* [SciresM](https://github.com/SciresM) for the libnx aes library
 * The constantly-improving docs on [Switchbrew wiki](https://switchbrew.org/wiki/) and [libnx](https://switchbrew.github.io/libnx/files.html)
 * Literally the friends I made along the way! I came to the scene late and I've still managed to meet some wonderful people :) Thanks for all the help testing, making suggestions, and cheerleading!
 
 Licenses
 =
-* `AES` functions are from [mbedtls 2.13.0](https://tls.mbed.org/) licensed under [GPLv2](source/mbedtls/gpl-2.0.txt)
-* Aarch64 assembly `sha256` is from [Atmosphère](https://github.com/atmosphere-NX/Atmosphere) licensed under [GPLv2](https://github.com/Atmosphere-NX/Atmosphere/blob/master/LICENSE)
 * `es` ipc code is from [Tinfoil](https://github.com/Adubbz/Tinfoil) licensed under [MIT](https://github.com/Adubbz/Tinfoil/blob/master/LICENSE)
 * `FatFs R0.13c` is located [here](http://elm-chan.org/fsw/ff/00index_e.html) and is licensed under its own [BSD-style license](source/fatfs/LICENSE.txt)
 * Simple `xxHash` implementation is from [stbrumme](https://github.com/stbrumme/xxhash) licensed under [MIT](https://github.com/stbrumme/xxhash/blob/master/LICENSE)

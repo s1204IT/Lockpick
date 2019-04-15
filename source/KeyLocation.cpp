@@ -16,7 +16,6 @@
 
 #include "KeyLocation.hpp"
 
-#include "Common.hpp"
 #include "xxhash64.h"
 
 #include <algorithm>
@@ -114,7 +113,7 @@ void KeyLocation::find_keys(std::vector<Key *> &keys) {
         size_t key_index = hash_index[hash];
         u8 key_length = keys[key_index]->length;
         // double-check sha256 since xxhash64 isn't as collision-safe
-        Common::sha256(data.data() + i, temp_hash, key_length);
+        sha256CalculateHash(temp_hash, data.data() + i, key_length);
         if (!std::equal(keys[key_index]->hash.begin(), keys[key_index]->hash.end(), temp_hash))
             continue;
         std::copy(data.begin() + i, data.begin() + i + key_length, std::back_inserter(keys[key_index]->key));

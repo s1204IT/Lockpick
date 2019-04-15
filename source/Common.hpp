@@ -67,7 +67,6 @@ namespace Common {
     // refresh display
     void update_display();
 
-    void sha256(const u8 *data, u8 *hash, size_t length);
     // reads "<keyname> = <hexkey>" and returns byte vector
     byte_vector key_string_to_byte_vector(std::string key_string);
 }

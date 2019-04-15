@@ -1,4 +1,9 @@
 # Changelog
+## Version 1.2.3
+* Remove mbedtls dependency in favor of new libnx crypto library
+* Remove libnx 1.6.0 support since crypto requires later commit
+* Skip contradictory messaging if skipping keyfile save
+
 ## Version 1.2.2
 * Do not overwrite existing keyfile that contains master_key_07
 * Read eticket_rsa_kek from existing keyfile in case user is only running this for titlekeys

@@ -273,9 +273,11 @@ void KeyCollection::get_keys() {
     Common::draw_text_with_time(0x10, 0x110, GREEN, "Total time elapsed:", total_time.get_elapsed());
 
     char keys_str[32];
-    sprintf(keys_str, "Total keys found: %lu", Key::get_saved_key_count());
-    Common::draw_text(0x2a0, 0x110, CYAN, keys_str);
-    Common::draw_text(0x80, 0x140, YELLOW, "Keys saved to \"/switch/prod.keys\"!");
+    if (!Lockpick_RCM_file_found) {
+        sprintf(keys_str, "Total keys found: %lu", Key::get_saved_key_count());
+        Common::draw_text(0x2a0, 0x110, CYAN, keys_str);
+        Common::draw_text(0x80, 0x140, YELLOW, "Keys saved to \"/switch/prod.keys\"!");
+    }
 
     Common::draw_text(0x10, 0x170, CYAN, "Dumping titlekeys...");
     Common::update_display();
@@ -727,15 +729,15 @@ void KeyCollection::get_titlekeys() {
 void KeyCollection::mgf1(const u8 *data, size_t data_length, u8 *mask, size_t mask_length) {
     u8 data_counter[data_length + 4] = {};
     std::copy(data, data + data_length, data_counter);
-    Common::sha256(data_counter, mask, data_length + 4);
+    sha256CalculateHash(mask, data_counter, data_length + 4);
     for (u32 i = 1; i < (mask_length / 0x20) + 1; i++) {
         for (size_t j = 0; j < 4; j++)
             data_counter[data_length + 3 - j] = (i >> (8 * j)) & 0xff;
         if (i * 0x20 <= mask_length)
-            Common::sha256(data_counter, mask + (i * 0x20), data_length + 4);
-        else {
+            sha256CalculateHash(mask + (i * 0x20), data_counter, data_length + 4);
+            else {
             u8 temp_mask[0x20];
-            Common::sha256(data_counter, temp_mask, data_length + 4);
+            sha256CalculateHash(temp_mask, data_counter, data_length + 4);
             std::copy(temp_mask, temp_mask + mask_length - (i * 0x20), mask + (i * 0x20));
         }
     }
