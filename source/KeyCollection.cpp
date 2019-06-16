@@ -392,7 +392,6 @@ void KeyCollection::get_memory_keys() {
 }
 
 void KeyCollection::derive_keys() {
-    header_key = {"header_key", 0x20, {}};
     if (header_kek_source.found() && header_key_source.found()) {
         u8 tempheaderkek[0x10], tempheaderkey[0x20];
         splCryptoInitialize();

@@ -1,4 +1,8 @@
 # Changelog
+## Version 1.2.4
+* Support new emunand FS memory layout
+* No longer save header_key if empty
+
 ## Version 1.2.3
 * Remove mbedtls dependency in favor of new libnx crypto library
 * Remove libnx 1.6.0 support since crypto requires later commit
