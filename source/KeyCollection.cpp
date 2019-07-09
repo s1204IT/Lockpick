@@ -580,7 +580,7 @@ void KeyCollection::get_titlekeys() {
     esInitialize();
     esCountCommonTicket(&common_count);
     esCountPersonalizedTicket(&personalized_count);
-    NcmRightsId common_rights_ids[common_count], personalized_rights_ids[personalized_count];
+    NcmNcaId common_rights_ids[common_count], personalized_rights_ids[personalized_count];
     esListCommonTicket(&ids_written, common_rights_ids, sizeof(common_rights_ids));
     esListPersonalizedTicket(&ids_written, personalized_rights_ids, sizeof(personalized_rights_ids));
     esExit();

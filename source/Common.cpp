@@ -125,8 +125,10 @@ namespace Common {
         framebufferEnd(&fb);
 
         draw_text(0x010, 0x020, YELLOW, "Lockpick! by shchmue");
-        draw_text(0x190, 0x020, YELLOW, "Note: This can only dump keys 00-05 (or 00-06 on 6.2.0)");
-        draw_text(0x190, 0x040, YELLOW, "Use Lockpick_RCM for newer keys on firmware 7.0.0+!");
+        draw_text(0x190, 0x020, YELLOW, "Note:");
+        draw_text(0x1e0, 0x020, YELLOW, "Lockpick can only dump keys 00-05 (or 00-06 on 6.2.0)");
+        draw_text(0x1e0, 0x040, CYAN, "Lockpick_RCM");
+        draw_text(0x2a0, 0x040, YELLOW, "can get newer keys on firmware 7.0.0+!");
 
         draw_set_rect(814, 452 + 42 * 0, 450, 42, FLAG_RED);
         draw_set_rect(814, 452 + 42 * 1, 450, 42, FLAG_ORANGE);
@@ -159,8 +161,9 @@ namespace Common {
         if (std::filesystem::exists("/backup")) {
             for (auto &p : std::filesystem::recursive_directory_iterator("/backup")) {
                 if (p.is_regular_file()) {
-                    if (!sbk.found() && (p.file_size() == 0x2fc) &&
-                        (std::string("fuse").compare(std::string(p.path().filename()).substr(0, 4)) == 0))
+                    if (!sbk.found() && (p.file_size() == 0x2fc || p.file_size() == 0x300) &&
+                        ((p.path().filename().string().substr(0, 5).compare("fuses") == 0) ||
+                        (p.path().filename().string().substr(0, 11).compare("fuse_cached") == 0)))
                     {
                         FILE *fuse_file = fopen(p.path().c_str(), "rb");
                         if (!fuse_file) continue;
@@ -171,7 +174,7 @@ namespace Common {
                         fclose(fuse_file);
                     }
                     else if (!tsec.found() && (p.file_size() == 0x20 || p.file_size() == 0x30) &&
-                        (std::string("tsec").compare(std::string(p.path().filename()).substr(0, 4)) == 0))
+                        (p.path().filename().string().substr(0, 4).compare("tsec") == 0))
                     {
                         FILE *tsec_file = fopen(p.path().c_str(), "rb");
                         if (!tsec_file) continue;

@@ -1,4 +1,9 @@
 # Changelog
+## Version 1.2.5
+* Support Hekate v5 fuse dump format
+* Make names consistent with libnx v2.2.0
+* Adjust text alignment and coloring in Lockpick_RCM note
+
 ## Version 1.2.4
 * Support new emunand FS memory layout
 * No longer save header_key if empty
