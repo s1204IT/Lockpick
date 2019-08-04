@@ -474,7 +474,7 @@ void KeyCollection::derive_keys() {
     FRESULT fr;
     FIL save_file;
 
-    fsOpenBisStorage(&storage, 31);
+    fsOpenBisStorage(&storage, FsBisStorageId_System);
     if (f_mount(&fs, "", 1) ||
         f_chdir("/save") ||
         f_open(&save_file, "8000000000000043", FA_READ | FA_OPEN_EXISTING))
@@ -634,7 +634,7 @@ void KeyCollection::get_titlekeys() {
     // map of all found rights ids and corresponding titlekeys
     std::unordered_map<std::string, std::string> titlekeys;
 
-    fsOpenBisStorage(&storage, 31);
+    fsOpenBisStorage(&storage, FsBisStorageId_System);
     if (f_mount(&fs, "", 1) || f_chdir("/save")) return;
     if (f_open(&save_file, "80000000000000e1", FA_READ | FA_OPEN_EXISTING)) return;
     while ((common_count != 0) && (titlekeys_dumped < common_count)) {
