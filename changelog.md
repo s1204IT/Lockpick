@@ -1,4 +1,7 @@
 # Changelog
+## Version 1.2.6
+* Fix bis key generation on newer hardware
+
 ## Version 1.2.5
 * Support Hekate v5 fuse dump format
 * Make names consistent with libnx v2.2.0

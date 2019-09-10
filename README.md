@@ -36,7 +36,7 @@ Notes
 
 Building
 =
-Release built with [libnx release v2.2.0](https://github.com/switchbrew/libnx).
+Release built with [libnx release v2.4.0](https://github.com/switchbrew/libnx).
 
 Uses `freetype` which comes with `switch-portlibs` via `devkitPro pacman`:
 ```
