@@ -402,16 +402,28 @@ void KeyCollection::derive_keys() {
         splCryptoExit();
     }
 
-    if (bis_key_source_00.found() && bis_key_source_01.found() && bis_key_source_02.found()) {
+    u64 key_generation = 0;
+    SetSysFirmwareVersion ver;
+
+    setsysInitialize();
+    setsysGetFirmwareVersion(&ver);
+    setsysExit();
+
+    Result rc = 0;
+    if (ver.major >= 5) {
+        rc = splGetConfig(SplConfigItem_NewKeyGeneration, &key_generation);
+    }
+
+    if (R_SUCCEEDED(rc) && bis_key_source_00.found() && bis_key_source_01.found() && bis_key_source_02.found()) {
         u8 tempbiskek[0x10], tempbiskey[0x20];
         splFsInitialize();
-        splFsGenerateSpecificAesKey(bis_key_source_00.key.data() + 0x00, 0, 0, tempbiskey + 0x00);
-        splFsGenerateSpecificAesKey(bis_key_source_00.key.data() + 0x10, 0, 0, tempbiskey + 0x10);
+        splFsGenerateSpecificAesKey(bis_key_source_00.key.data() + 0x00, key_generation, 0, tempbiskey + 0x00);
+        splFsGenerateSpecificAesKey(bis_key_source_00.key.data() + 0x10, key_generation, 0, tempbiskey + 0x10);
         bis_key.push_back(Key {"bis_key_00", 0x20, byte_vector(tempbiskey, tempbiskey + 0x20)});
         splFsExit();
 
         splCryptoInitialize();
-        splCryptoGenerateAesKek(bis_kek_source.key.data(), 0, 1, tempbiskek);
+        splCryptoGenerateAesKek(bis_kek_source.key.data(), key_generation, 1, tempbiskek);
         splCryptoGenerateAesKey(tempbiskek, bis_key_source_01.key.data() + 0x00, tempbiskey + 0x00);
         splCryptoGenerateAesKey(tempbiskek, bis_key_source_01.key.data() + 0x10, tempbiskey + 0x10);
         bis_key.push_back(Key {"bis_key_01", 0x20, byte_vector(tempbiskey, tempbiskey + 0x20)});
