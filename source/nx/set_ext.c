@@ -1,55 +1,26 @@
 #include "set_ext.h"
 
-#include <switch/arm/atomics.h>
+#include "../service_guard.h"
+
 #include <switch/services/sm.h>
 #include <switch/types.h>
 
 static Service g_setcalSrv;
-static u64 g_refCntCal;
 
-Result setcalInitialize(void) {
-    atomicIncrement64(&g_refCntCal);
+NX_GENERATE_SERVICE_GUARD(setcal);
 
-    if (serviceIsActive(&g_setcalSrv))
-        return MAKERESULT(Module_Libnx, LibnxError_AlreadyInitialized);
-
+Result _setcalInitialize() {
     return smGetService(&g_setcalSrv, "set:cal");
 }
 
-void setcalExit(void) {
-    if (atomicDecrement64(&g_refCntCal) == 0) {
-        serviceClose(&g_setcalSrv);
-    }
+void _setcalCleanup() {
+    serviceClose(&g_setcalSrv);
 }
 
-Result setcalGetEticketDeviceKey(void *key) {
-    IpcCommand c;
-    ipcInitialize(&c);
-    ipcAddRecvBuffer(&c, key, 0x244, 0);
-
-    struct {
-        u64 magic;
-        u64 cmd_id;
-    } *raw;
-
-    raw = ipcPrepareHeader(&c, sizeof(*raw));
-
-    raw->magic = SFCI_MAGIC;
-    raw->cmd_id = 21;
-
-    Result rc = serviceIpcDispatch(&g_setcalSrv);
-
-    if (R_SUCCEEDED(rc)) {
-        IpcParsedCommand r;
-        ipcParse(&r);
-
-        struct {
-            u64 magic;
-            u64 result;
-        } *resp = r.Raw;
-
-        rc = resp->result;
-    }
-
-    return rc;
+Result setcalGetEticketDeviceKey(void *key)
+{
+    return serviceDispatch(&g_setcalSrv, 21,
+        .buffer_attrs = { SfBufferAttr_HipcMapAlias | SfBufferAttr_Out },
+        .buffers = { { key, 0x244 } },
+    );
 }
