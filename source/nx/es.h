@@ -8,5 +8,5 @@ void esExit();
 
 Result esCountCommonTicket(u32 *num_tickets); //9
 Result esCountPersonalizedTicket(u32 *num_tickets); // 10
-Result esListCommonTicket(u32 *numRightsIdsWritten, NcmNcaId *outBuf, size_t bufSize);
-Result esListPersonalizedTicket(u32 *numRightsIdsWritten, NcmNcaId *outBuf, size_t bufSize);
+Result esListCommonTicket(u32 *numRightsIdsWritten, NcmRightsId *outBuf, size_t bufSize);
+Result esListPersonalizedTicket(u32 *numRightsIdsWritten, NcmRightsId *outBuf, size_t bufSize);
