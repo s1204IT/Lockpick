@@ -101,7 +101,7 @@ void KeyLocation::get_from_memory(u64 tid, u8 seg_mask) {
 
 void KeyLocation::get_keyblobs() {
     FsStorage boot0;
-    fsOpenBisStorage(&boot0, FsBisStorageId_Boot0);
+    fsOpenBisStorage(&boot0, FsBisPartitionId_BootPartition1Root);
     data.resize(0x200 * KNOWN_KEYBLOBS);
     fsStorageRead(&boot0, KEYBLOB_OFFSET, data.data(), data.size());
     fsStorageClose(&boot0);
