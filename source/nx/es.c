@@ -17,56 +17,48 @@ void _esCleanup() {
     serviceClose(&g_esSrv);
 }
 
-Result esCountCommonTicket(u32 *num_tickets)
+Result esCountCommonTicket(u32 *out_count)
 {
-    struct {
-        u32 num_tickets;
-    } out;
+    u32 num_tickets;
 
-    Result rc = serviceDispatchOut(&g_esSrv, 9, out);
-    if (R_SUCCEEDED(rc) && num_tickets) *num_tickets = out.num_tickets;
+    Result rc = serviceDispatchOut(&g_esSrv, 9, num_tickets);
+    if (R_SUCCEEDED(rc) && out_count) *out_count = num_tickets;
 
     return rc;
 }
 
-Result esCountPersonalizedTicket(u32 *num_tickets)
+Result esCountPersonalizedTicket(u32 *out_count)
 {
-    struct {
-        u32 num_tickets;
-    } out;
+    u32 num_tickets;
 
-    Result rc = serviceDispatchOut(&g_esSrv, 10, out);
-    if (R_SUCCEEDED(rc) && num_tickets) *num_tickets = out.num_tickets;
+    Result rc = serviceDispatchOut(&g_esSrv, 10, num_tickets);
+    if (R_SUCCEEDED(rc) && out_count) *out_count = num_tickets;
 
     return rc;
 }
 
-Result esListCommonTicket(u32 *numRightsIdsWritten, NcmRightsId *outBuf, size_t bufSize)
+Result esListCommonTicket(u32 *numRightsIdsWritten, RightsId *outBuf, size_t bufSize)
 {
-    struct {
-        u32 num_rights_ids_written;
-    } out;
+    u32 num_rights_ids_written;
 
-    Result rc = serviceDispatchInOut(&g_esSrv, 11, *numRightsIdsWritten, out,
+    Result rc = serviceDispatchOut(&g_esSrv, 11, num_rights_ids_written,
         .buffer_attrs = { SfBufferAttr_HipcMapAlias | SfBufferAttr_Out },
         .buffers = { { outBuf, bufSize } },
     );
-    if (R_SUCCEEDED(rc) && numRightsIdsWritten) *numRightsIdsWritten = out.num_rights_ids_written;
+    if (R_SUCCEEDED(rc) && numRightsIdsWritten) *numRightsIdsWritten = num_rights_ids_written;
 
     return rc;
 }
 
-Result esListPersonalizedTicket(u32 *numRightsIdsWritten, NcmRightsId *outBuf, size_t bufSize)
+Result esListPersonalizedTicket(u32 *numRightsIdsWritten, RightsId *outBuf, size_t bufSize)
 {
-    struct {
-        u32 num_rights_ids_written;
-    } out;
+    u32 num_rights_ids_written;
 
-    Result rc = serviceDispatchInOut(&g_esSrv, 12, *numRightsIdsWritten, out,
+    Result rc = serviceDispatchOut(&g_esSrv, 12, num_rights_ids_written,
         .buffer_attrs = { SfBufferAttr_HipcMapAlias | SfBufferAttr_Out },
         .buffers = { { outBuf, bufSize } },
     );
-    if (R_SUCCEEDED(rc) && numRightsIdsWritten) *numRightsIdsWritten = out.num_rights_ids_written;
+    if (R_SUCCEEDED(rc) && numRightsIdsWritten) *numRightsIdsWritten = num_rights_ids_written;
 
     return rc;
 }

@@ -35,7 +35,6 @@
 
 extern "C" {
     #include "nx/es.h"
-    #include "nx/set_ext.h"
 }
 
 #define TITLEKEY_BUFFER_SIZE 0x40000
@@ -486,7 +485,7 @@ void KeyCollection::derive_keys() {
     FRESULT fr;
     FIL save_file;
 
-    fsOpenBisStorage(&storage, FsBisStorageId_System);
+    fsOpenBisStorage(&storage, FsBisPartitionId_System);
     if (f_mount(&fs, "", 1) ||
         f_chdir("/save") ||
         f_open(&save_file, "8000000000000043", FA_READ | FA_OPEN_EXISTING))
@@ -592,7 +591,7 @@ void KeyCollection::get_titlekeys() {
     esInitialize();
     esCountCommonTicket(&common_count);
     esCountPersonalizedTicket(&personalized_count);
-    NcmRightsId common_rights_ids[common_count], personalized_rights_ids[personalized_count];
+    RightsId common_rights_ids[common_count], personalized_rights_ids[personalized_count];
     esListCommonTicket(&ids_written, common_rights_ids, sizeof(common_rights_ids));
     esListPersonalizedTicket(&ids_written, personalized_rights_ids, sizeof(personalized_rights_ids));
     esExit();
@@ -608,27 +607,27 @@ void KeyCollection::get_titlekeys() {
     std::unordered_set<std::string> rights_ids;
     for (size_t i = 0; i < common_count; i++) {
         for (size_t j = 0; j < 0x10; j++) {
-            sprintf(&rights_id_string[j*2], "%02x", common_rights_ids[i].rights_id.c[j]);
+            sprintf(&rights_id_string[j*2], "%02x", common_rights_ids[i].c[j]);
         }
         rights_ids.insert(rights_id_string);
     }
     for (size_t i = 0; i < personalized_count; i++) {
         for (size_t j = 0; j < 0x10; j++) {
-            sprintf(&rights_id_string[j*2], "%02x", personalized_rights_ids[i].rights_id.c[j]);
+            sprintf(&rights_id_string[j*2], "%02x", personalized_rights_ids[i].c[j]);
         }
         rights_ids.insert(rights_id_string);
     }
 
     // get extended eticket RSA key from PRODINFO
-    u8 eticket_data[0x244] = {};
+    SetCalRsa2048DeviceKey eticket_data = {};
 
     setcalInitialize();
-    setcalGetEticketDeviceKey(eticket_data);
+    setcalGetEticketDeviceKey(&eticket_data);
     setcalExit();
 
     byte_vector dec_keypair = eticket_rsa_kek.aes_decrypt_ctr(
-        byte_vector(eticket_data + 0x14, eticket_data + 0x244),
-        byte_vector(eticket_data + 4, eticket_data + 0x14)
+        byte_vector(eticket_data.key + 0x10, eticket_data.key + 0x240),
+        byte_vector(eticket_data.key, eticket_data.key + 0x10)
     );
 
     // public exponent must be 65537 == 0x10001 (big endian)
@@ -646,7 +645,7 @@ void KeyCollection::get_titlekeys() {
     // map of all found rights ids and corresponding titlekeys
     std::unordered_map<std::string, std::string> titlekeys;
 
-    fsOpenBisStorage(&storage, FsBisStorageId_System);
+    fsOpenBisStorage(&storage, FsBisPartitionId_System);
     if (f_mount(&fs, "", 1) || f_chdir("/save")) return;
     if (f_open(&save_file, "80000000000000e1", FA_READ | FA_OPEN_EXISTING)) return;
     while ((common_count != 0) && (titlekeys_dumped < common_count)) {
